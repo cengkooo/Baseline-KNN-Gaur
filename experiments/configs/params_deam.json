@@ -1,0 +1,12 @@
+{
+  "dataset": "DEAM",
+  "k_values": [5, 7, 10, 15, 20, 25, 30],
+  "playlist_lengths": [5, 11, 12, 15, 19],
+  "metrics": ["cosine", "euclidean", "manhattan"],
+  "n_runs_per_config": 50,
+  "hardware": {
+    "preferred_device": "cuda",
+    "gpu_name": "NVIDIA GeForce RTX 3070 Ti",
+    "batch_size": 256
+  }
+}
