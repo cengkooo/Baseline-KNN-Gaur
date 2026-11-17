@@ -1,6 +1,7 @@
 # Baseline Model Replication: Shaurya Gaur (2023 / EvoMUSART 2024)
 ## 🎯 Primary Dataset: DEAM (Database for Emotion Analysis in Music)
 ### ⚡ PyTorch CUDA (NVIDIA GeForce RTX 3070 Ti) & Environment `uv`
+#### https://drive.google.com/drive/folders/1YIyq1PhKwOklye8QLa1nu56IjKw8oLUn
 
 > **Paper Title:** *Mood-Dynamic Playlist: Interpolating a Path of Emotions Using a KNN Algorithm*  
 > **Author:** Shaurya Gaur (Master's Thesis, University of Victoria / Springer EvoMUSART 2024)  
