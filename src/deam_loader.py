@@ -1,14 +1,14 @@
 """
 DEAM Dataset Loader and Normalization Module.
-Dataset Path: Dataset/DEAM/
+Dataset Path: EXPERIMENT/Dataset/DEAM/
 Location of Static Annotations:
-  - Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/song_level/static_annotations_averaged_songs_1_2000.csv
-  - Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/song_level/static_annotations_averaged_songs_2000_2058.csv
+  - EXPERIMENT/Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/song_level/static_annotations_averaged_songs_1_2000.csv
+  - EXPERIMENT/Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/song_level/static_annotations_averaged_songs_2000_2058.csv
 Location of Dynamic Annotations (2 Hz, 500ms):
-  - Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/dynamic (per second annotations)/valence.csv
-  - Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/dynamic (per second annotations)/arousal.csv
+  - EXPERIMENT/Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/dynamic (per second annotations)/valence.csv
+  - EXPERIMENT/Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/dynamic (per second annotations)/arousal.csv
 Location of Audio MP3s:
-  - Dataset/DEAM/DEAM_audio/MEMD_audio/{song_id}.mp3 (1,802 files)
+  - EXPERIMENT/Dataset/DEAM/DEAM_audio/MEMD_audio/{song_id}.mp3 (1,802 files)
 """
 
 import os
@@ -19,22 +19,32 @@ from typing import Dict, List, Optional, Tuple
 
 
 def get_default_deam_path() -> str:
-    """Finds the absolute path to Dataset/DEAM."""
-    # Check relative to this file
+    """Finds the absolute path to EXPERIMENT/Dataset/DEAM."""
     current_file_dir = os.path.dirname(os.path.abspath(__file__))
-    # EXPERIMENT/Code/baseline_gaur/src -> EXPERIMENT/Code/baseline_gaur -> EXPERIMENT/Code -> EXPERIMENT -> Root
+    # EXPERIMENT/Code/baseline_gaur/src -> EXPERIMENT/Code/baseline_gaur -> EXPERIMENT/Code -> EXPERIMENT
+    experiment_dir = os.path.abspath(os.path.join(current_file_dir, "..", "..", ".."))
+    candidate_exp = os.path.join(experiment_dir, "Dataset", "DEAM")
+    if os.path.exists(candidate_exp):
+        return candidate_exp
+        
+    # Check relative to repo root
     repo_root = os.path.abspath(os.path.join(current_file_dir, "..", "..", "..", ".."))
-    candidate = os.path.join(repo_root, "Dataset", "DEAM")
-    if os.path.exists(candidate):
-        return candidate
+    candidate_repo = os.path.join(repo_root, "EXPERIMENT", "Dataset", "DEAM")
+    if os.path.exists(candidate_repo):
+        return candidate_repo
         
     # Check directly relative to cwd
-    candidate_cwd = os.path.abspath(os.path.join("Dataset", "DEAM"))
+    candidate_cwd = os.path.abspath(os.path.join("EXPERIMENT", "Dataset", "DEAM"))
     if os.path.exists(candidate_cwd):
         return candidate_cwd
         
+    # Fallback to old path if exists
+    candidate_old = os.path.join(repo_root, "Dataset", "DEAM")
+    if os.path.exists(candidate_old):
+        return candidate_old
+        
     # Fallback absolute path
-    return r"D:\Kuliah\Semester 7\Tugas Akhir\Proposal Tugas Akhir\Dataset\DEAM"
+    return r"D:\Kuliah\Semester 7\Tugas Akhir\Proposal Tugas Akhir\EXPERIMENT\Dataset\DEAM"
 
 
 def load_deam_static_annotations(deam_root: Optional[str] = None) -> pd.DataFrame:

@@ -1,6 +1,6 @@
 """
 Acoustic Audio Feature Extraction Module for DEAM Dataset.
-Reads raw MP3 files from Dataset/DEAM/DEAM_audio/MEMD_audio/{song_id}.mp3
+Reads raw MP3 files from EXPERIMENT/Dataset/DEAM/DEAM_audio/MEMD_audio/{song_id}.mp3
 Extracts 15 representative acoustic features (MFCCs, Spectral Centroid, Rolloff, Flatness, RMS, ZCR, Tempo, Chroma)
 and saves the consolidated features to data/processed/deam_extracted_features.csv.
 """

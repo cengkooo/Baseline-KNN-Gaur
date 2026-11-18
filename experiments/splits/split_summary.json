@@ -1,0 +1,66 @@
+{
+  "total_tracks": 1802,
+  "train_set": {
+    "total": 1261,
+    "distribution": {
+      "Q3_Sad": {
+        "count": 519,
+        "percentage": 41.16
+      },
+      "Q1_Happy": {
+        "count": 416,
+        "percentage": 32.99
+      },
+      "Q4_Calm": {
+        "count": 166,
+        "percentage": 13.16
+      },
+      "Q2_Angry": {
+        "count": 160,
+        "percentage": 12.69
+      }
+    }
+  },
+  "val_set": {
+    "total": 270,
+    "distribution": {
+      "Q3_Sad": {
+        "count": 111,
+        "percentage": 41.11
+      },
+      "Q1_Happy": {
+        "count": 89,
+        "percentage": 32.96
+      },
+      "Q2_Angry": {
+        "count": 35,
+        "percentage": 12.96
+      },
+      "Q4_Calm": {
+        "count": 35,
+        "percentage": 12.96
+      }
+    }
+  },
+  "test_set": {
+    "total": 271,
+    "distribution": {
+      "Q3_Sad": {
+        "count": 112,
+        "percentage": 41.33
+      },
+      "Q1_Happy": {
+        "count": 89,
+        "percentage": 32.84
+      },
+      "Q4_Calm": {
+        "count": 36,
+        "percentage": 13.28
+      },
+      "Q2_Angry": {
+        "count": 34,
+        "percentage": 12.55
+      }
+    }
+  }
+}

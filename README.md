@@ -5,7 +5,7 @@
 
 > **Paper Title:** *Mood-Dynamic Playlist: Interpolating a Path of Emotions Using a KNN Algorithm*  
 > **Author:** Shaurya Gaur (Master's Thesis, University of Victoria / Springer EvoMUSART 2024)  
-> **Primary Dataset:** **DEAM (`Dataset/DEAM/`)** — 1,802 audio tracks (`.mp3`, 45s) with static & dynamic (2 Hz) emotion annotations.  
+> **Primary Dataset:** **DEAM (`EXPERIMENT/Dataset/DEAM/`)** — 1,802 audio tracks (`.mp3`, 45s) with static & dynamic (2 Hz) emotion annotations.  
 > **Hardware Target:** NVIDIA GeForce RTX 3070 Ti (8GB GDDR6X, CUDA Compute 8.6) + PyTorch 2.x  
 > **Package / Environment Manager:** `uv` (Astral)  
 > **Academic Standard:** Open Data ITERA Bab 8 & Code Walkthrough Ready.
@@ -30,9 +30,18 @@ EXPERIMENT/Code/baseline_gaur/
 │   ├── stage1_knn.py                   # 🎯 Stage 1: Linear Waypoint Interpolation (Eq. 5) & KD-Tree KNN
 │   ├── stage2_selector.py              # 🎵 Stage 2: Audio Distance Re-Ranking via PyTorch CUDA tensors
 │   ├── playlist_generator.py           # 🔄 TwoStagePlaylistGenerator (Gaur Algorithm 1)
+│   ├── split_utils.py                  # ✂️ Stratified 4-Quadrant Train/Val/Test Split & Anti-Data Leakage
 │   └── metrics.py                      # 📊 Metrics: Smoothness (PCC) & Evenness (Var(RMSE)/sqrt(D))
 └── experiments/
     ├── run_experiment.py               # End-to-end runnable script on DEAM dataset
+    ├── run_quadrant_experiments.py      # Batch 540 playlist benchmark script across 6 routes
+    ├── configs/
+    │   └── params_deam.json            # Grid hyperparameter configurations (K, N, metrics)
+    ├── splits/
+    │   ├── deam_train_manifest.csv     # 70% Stratified Training set (1,261 tracks)
+    │   ├── deam_val_manifest.csv       # 15% Stratified Validation set (270 tracks)
+    │   ├── deam_test_manifest.csv      # 15% Stratified Test set (271 tracks)
+    │   └── split_summary.json          # Manifest distribution statistics
     └── results/
         ├── metrics_comparison_deam.csv # Comparison table (Cosine vs Euclidean vs Manhattan)
         ├── baseline_cosine_deam_playlist.csv # Generated 12-track playlist traversal
@@ -62,6 +71,23 @@ $$\text{Dist}_{\text{Cosine}}(u, v) = 1.0 - \frac{u \cdot v}{\|u\|_2 \|v\|_2}$$
   $$\rho = \left| \frac{\text{Cov}(V, A)}{\sigma_V \sigma_A} \right|$$
 - **Evenness (Step Size Variance - Eq. 7):**
   $$\text{RMSE}_k = \frac{\|S_{k+1} - S_k\|_2}{\sqrt{D}}, \quad \text{Evenness} = \text{Var}(\text{RMSE})$$
+
+---
+
+## ✂️ DEAM Dataset Splitting Methodology (Anti-Data Leakage)
+
+Due to severe class imbalance in DEAM (Sad tracks account for ~41% while Angry and Calm are only ~13% each), random splitting causes severe under-representation of sparse quadrants. We implement **Stratified Sampling based on Russell's 4 Emotion Quadrants**:
+
+1. **Supervised / MER Split (70% Train / 15% Val / 15% Test):**
+   - **Train (1,261 tracks):** Fits Yeo-Johnson transformer, 12D PCA projection, and MinMax bounds.
+   - **Validation (270 tracks) & Test (271 tracks):** Transformed strictly using parameters learned from Train (`GaurPreprocessor.transform()`), guaranteeing **Zero Data Leakage**.
+2. **Catalog Retrieval Split (80% Catalog Pool / 20% Unseen Query Seeds):**
+   - **Catalog Pool (80%):** Populates the KD-Tree search space.
+   - **Query Seeds (20%):** Serves exclusively as unseen start ($S_0$) and destination ($S_N$) waypoints.
+3. **Execution Command:**
+   ```powershell
+   python -c "from src import load_or_generate_deam_dataset, stratified_split_deam, assign_emotion_quadrant, save_split_manifests; df, _ = load_or_generate_deam_dataset(); df['quadrant'] = assign_emotion_quadrant(df); tr, va, te = stratified_split_deam(df, 0.7, 0.15, 0.15); save_split_manifests(tr, va, te, 'experiments/splits')"
+   ```
 
 ---
 

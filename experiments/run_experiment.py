@@ -4,7 +4,7 @@ Primary Dataset: DEAM (Database for Emotion Analysis in Music)
 Hardware: PyTorch CUDA (NVIDIA GeForce RTX 3070 Ti) with CPU fallback.
 
 Runs:
-1. Loads primary dataset DEAM (1,802 songs) from Dataset/DEAM/ with normalized Valence-Arousal [-1, 1]
+1. Loads primary dataset DEAM (1,802 songs) from EXPERIMENT/Dataset/DEAM/ with normalized Valence-Arousal [-1, 1]
 2. Preprocessing: IQR Discretizer -> Yeo-Johnson PowerTransformer -> 12D PCA -> MinMaxScaler [-1, 1]
 3. SongDatasetClass & KD-Tree indexing on 2D emotion space
 4. 4-Quadrant Traversal experiment (e.g. Sad (Q3) -> Happy (Q1))

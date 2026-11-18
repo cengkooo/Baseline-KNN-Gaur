@@ -98,6 +98,32 @@ class GaurPreprocessor:
         
         return result_df, pca_feature_names
 
+    def transform(self, df: pd.DataFrame, audio_feature_cols: List[str], va_cols: Tuple[str, str] = ('valence', 'arousal')) -> Tuple[pd.DataFrame, List[str]]:
+        """
+        Transforms unseen validation or test data using parameters fitted on the training set (Zero Data Leakage).
+        Applies learned Yeo-Johnson lambdas, PCA projection matrix, and MinMax scaling bounds.
+        """
+        if not self.is_fitted:
+            raise ValueError("Preprocessor has not been fitted yet. Call fit_transform on training data first.")
+            
+        df_processed = self.discretize_extreme_outliers(df, audio_feature_cols)
+        
+        audio_data = df_processed[audio_feature_cols].values
+        audio_transformed = self.power_transformer.transform(audio_data)
+        audio_pca = self.pca.transform(audio_transformed)
+        audio_scaled = self.minmax_scaler.transform(audio_pca)
+        
+        n_comps = self.pca.n_components_
+        pca_feature_names = [f"pca_{i}" for i in range(n_comps)]
+        df_pca = pd.DataFrame(audio_scaled, columns=pca_feature_names, index=df.index)
+        
+        result_df = df[['track_id', 'song_title', 'artist_name', va_cols[0], va_cols[1]]].copy()
+        result_df[va_cols[0]] = np.clip(result_df[va_cols[0]].astype(float), -1.0, 1.0)
+        result_df[va_cols[1]] = np.clip(result_df[va_cols[1]].astype(float), -1.0, 1.0)
+        
+        result_df = pd.concat([result_df, df_pca], axis=1)
+        return result_df, pca_feature_names
+
     def get_explained_variance_ratio(self) -> np.ndarray:
         """Returns the variance ratio explained by PCA components."""
         if not self.is_fitted:

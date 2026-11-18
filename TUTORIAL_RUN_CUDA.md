@@ -112,11 +112,26 @@ Skrip ini akan menguji kombinasi:
 ---
 
 ### Opsi C: Ekstraksi Fitur Akustik Audio DEAM (Batch MP3)
-Jika Anda ingin mengekstrak ulang 15 fitur akustik audio mentah dari 1.802 file `.mp3` di `Dataset/DEAM/DEAM_audio/MEMD_audio`:
+Jika Anda ingin mengekstrak ulang 15 fitur akustik audio mentah dari 1.802 file `.mp3` di `EXPERIMENT/Dataset/DEAM/DEAM_audio/MEMD_audio`:
 
 ```powershell
 python src/deam_extractor.py
 ```
+
+---
+
+### Opsi D: Partisi Dataset DEAM (Stratified Split & Anti-Data Leakage)
+Membagi 1.802 lagu DEAM secara terstratifikasi berdasarkan 4 Kuadran Emosi Russell (70% Train / 15% Val / 15% Test) untuk memastikan *Zero Data Leakage*:
+
+```powershell
+python -c "from src import load_or_generate_deam_dataset, stratified_split_deam, assign_emotion_quadrant, save_split_manifests; df, _ = load_or_generate_deam_dataset(); df['quadrant'] = assign_emotion_quadrant(df); tr, va, te = stratified_split_deam(df, 0.7, 0.15, 0.15); save_split_manifests(tr, va, te, 'experiments/splits'); print('Manifest split sukses disimpan!')"
+```
+
+**Artefak yang Dihasilkan di `experiments/splits/`:**
+* `deam_train_manifest.csv`: 1.261 lagu (70% data latih / fitting transformer Yeo-Johnson & PCA).
+* `deam_val_manifest.csv`: 270 lagu (15% data validasi penyesuaian hyperparameter $K$ dan $N$).
+* `deam_test_manifest.csv`: 271 lagu (15% data uji holdout murni bebas data leakage).
+* `split_summary.json`: Rekapitulasi jumlah dan persentase trek per kuadran secara presisi.
 *Fitur akan tersimpan ke `data/processed/deam_extracted_features.csv`.*
 
 ---
