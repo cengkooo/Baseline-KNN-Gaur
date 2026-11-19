@@ -8,6 +8,10 @@
 > **Hardware terverifikasi:** NVIDIA GeForce RTX 3070 Ti Laptop GPU, driver `620.70.06`, 8.192 MiB VRAM
 > **Environment terverifikasi:** `uv 0.13.9`, CPython `3.11.18`, PyTorch `2.11.0+cu128`, `torch.cuda.is_available() == True`, CUDA runtime `12.8`
 > **Status terakhir dicek:** 19 November 2026
+>
+> **Progres:** Fase 0 ✅ · 1 ✅ · 2 ✅ · 3 ✅ · 4 ✅ · 5 ⬜ · 6 ✅ · 7 ✅ · 8 ✅ · 9 ⬜ · 10 ⬜ · 11 ⬜ · 12 ⬜
+>
+> **Sisa pekerjaan inti:** ekstraksi fitur audio nyata (Fase 5, opsional/disarankan), batch 540 playlist (Fase 9), analisis (Fase 10), dan penutupan Git (Fase 11–12).
 
 ---
 
@@ -20,7 +24,7 @@
    - menghitung metrik evaluasi.
    Jadi tidak ada epoch, checkpoint, atau loss curve. GPU dipakai di Stage 2 (jarak akustik) dan sebagai kesiapan jalur CUDA.
 2. **Merge conflict sudah diselesaikan (19 Nov 2026).** Tiga file (`src/deam_loader.py`, `README.md`, `TUTORIAL_RUN_CUDA.md`) sudah bersih dan di-commit (`14aa2ad`). Unit test 8/8 `OK`. Fase 0 di bawah disimpan sebagai rekam jejak dan untuk berjaga-jaga bila konflik muncul lagi.
-3. **Artefak hasil yang ada sekarang berasal dari dataset sintetis, bukan DEAM.** Bukti: `experiments/results/baseline_cosine_deam_playlist.csv` berisi `track_id` `TRK_000070`, `Song Title 70`, sedangkan DEAM asli ber-ID `DEAM_xxxx`. Artinya run lama jatuh ke fallback sintetis. Artefak ini **harus diregenerasi** setelah Fase 0 selesai, dan wajib diverifikasi ber-ID `DEAM_`.
+3. **Artefak lama yang sintetis (`TRK_*`) sudah diganti.** Run single pada 19 Nov 2026 menghasilkan playlist asli DEAM (`DEAM_2022 → DEAM_1879`) dan metrik yang sama dengan target dokumen (Cosine PCC `0.978100`, Euclidean `0.987591`, Manhattan `0.976171`). Namun **fitur akustik yang dipakai masih Mode A (sintetis deterministik)** karena `data/processed/deam_extracted_features.csv` belum ada. Untuk klaim "fitur audio nyata" di Bab Hasil, Fase 5 wajib dijalankan lalu seluruh eksperimen diregenerasi.
 4. **Gunakan venv proyek, jangan `python` sistem.** Semua perintah di bawah dijalankan dari root proyek dengan `.venv` aktif (atau prefiks `.venv/bin/python`).
 5. **Jangan pernah commit** `.venv/`, `Dataset/`, `data/processed/`, dan `experiments/results/*` (sudah di-`.gitignore`).
 
@@ -28,7 +32,7 @@
 
 ## ⚡ Jalur cepat (ringkasan 8 perintah)
 
-Hanya jalankan ini **setelah Fase 0 selesai**:
+Referensi cepat. Fase 0–4, 6, 7, dan 8 sudah selesai; perintah di bawah aman diulang, tetapi yang benar-benar masih perlu dijalankan adalah batch (Fase 9) dan validasinya.
 
 ```bash
 cd ~/TA-123140205/Code/Baseline-KNN-Gaur
@@ -52,18 +56,22 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 | `.venv` Python 3.11 | ✅ | `Python 3.11.18` |
 | PyTorch CUDA | ✅ | `2.11.0+cu128`, `cuda.is_available() == True` |
 | Dataset DEAM | ✅ | symlink `Dataset` → `~/TA-123140205/Dataset`, 1.802 MP3, anotasi lengkap |
-| Manifest split | ✅ | train 1.261 / val 270 / test 271 |
+| Manifest split | ✅ Terverifikasi | train 1.261 / val 270 / test 271; irisan Train-Val/Test/Val-Test = 0 |
 | **Merge conflict** | ✅ Selesai | Commit `14aa2ad`; unit test 8/8 `OK` |
+| Unit test log | ✅ Tersimpan | `experiments/results/unit_test_deam.log` (`Ran 8 tests in 1.068s`) |
+| Anotasi dinamis | ✅ Terverifikasi | valence `(1802, 1224)`, arousal `(1802, 1225)` |
+| Preprocessing | ✅ Terverifikasi | 12 PCA, rentang `-1.0 … 1.0`, explained variance `82.26%` |
 | `data/processed/` | ⚠️ Belum ada | Ekstraksi fitur audio nyata belum pernah dijalankan |
 | Hasil batch 540 | ⚠️ Belum ada | `batch_quadrant_experiments_deam.csv` tidak ada |
-| Hasil single run | ✅ Diregenerasi | Playlist `DEAM_2022 → DEAM_1879`, metrik sesuai target |
-| Git working tree | ✅ Bersih | Hanya `?? Dataset` (symlink, memang tidak di-commit) |
+| Hasil single run | ✅ Diregenerasi | `DEAM_2022 → DEAM_1879`, 12 lagu unik, metrik sesuai target |
+| Git working tree | ✅ Bersih | Commit terakhir `6961158`; hanya `?? Dataset` (symlink) |
 
 ---
 
-# 🔹 FASE 0 — Buka Blocker: Selesaikan Merge Conflict (± 10 menit)
+# 🔹 FASE 0 — Buka Blocker: Selesaikan Merge Conflict (± 10 menit) — ✅ SELESAI
 
 > **Gerbang wajib.** Semua fase lain akan gagal selama langkah ini belum tuntas.
+> **Status:** selesai pada 19 Nov 2026 (commit `14aa2ad`). Langkah di bawah disimpan sebagai rekam jejak.
 
 - [x] **0.1 — Cek status dan daftar file konflik**
   ```bash
@@ -118,33 +126,37 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 1 — Preflight Hardware & Dataset (± 2 menit)
 
-- [ ] **1.1 — Pastikan GPU dan driver terdeteksi**
+- [x] **1.1 — Pastikan GPU dan driver terdeteksi**
   ```bash
   nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
   ```
   Ekspektasi: `NVIDIA GeForce RTX 3070 Ti Laptop GPU, 620.70.06, 8192 MiB`.
+  ✅ **Terverifikasi:** output persis sama dengan ekspektasi.
 
-- [ ] **1.2 — Pastikan symlink dataset benar**
+- [x] **1.2 — Pastikan symlink dataset benar**
   ```bash
   ls -l Dataset
   ls Dataset/DEAM
   find Dataset/DEAM/DEAM_audio/MEMD_audio -maxdepth 1 -name '*.mp3' | wc -l
   ```
   Ekspektasi: symlink ke `/home/itera-if/TA-123140205/Dataset`, dan jumlah MP3 = **1802**.
+  ✅ **Terverifikasi:** symlink valid dan jumlah MP3 = **1802**.
 
-- [ ] **1.3 — Pastikan file anotasi statis & dinamis lengkap**
+- [x] **1.3 — Pastikan file anotasi statis & dinamis lengkap**
   ```bash
   ls "Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/song_level"
   ls "Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/dynamic (per second annotations)"
   ```
   Ekspektasi statis: `static_annotations_averaged_songs_1_2000.csv`, `static_annotations_averaged_songs_2000_2058.csv`.
   Ekspektasi dinamis: `valence.csv`, `arousal.csv` (dipakai model usulan, bukan baseline).
+  ✅ **Terverifikasi:** valence `(1802, 1224)` dan arousal `(1802, 1225)` berhasil dimuat.
 
-- [ ] **1.4 — Cek resource laptop**
+- [x] **1.4 — Cek resource laptop**
   ```bash
   df -h ~            # butuh ruang untuk log + CSV (kecil) dan sementara ekstraksi audio
   free -h            # RAM; ekstraksi librosa single-thread ~0.5-1.5 GB
   ```
+  ✅ **Terverifikasi:** `/home` 66 GB (45 GB terpakai, **21 GB bebas**), RAM 31 GiB (23 GiB available). Cukup untuk ekstraksi audio.
 
 **Definisi selesai Fase 1:** GPU terdeteksi, 1.802 MP3, 2 CSV statis, 2 CSV dinamis, ruang disk cukup.
 
@@ -152,7 +164,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 2 — Environment `uv` + PyTorch CUDA (± 5 menit, sebagian sudah terpasang)
 
-- [ ] **2.1 — Aktifkan venv dan cek interpreter**
+- [x] **2.1 — Aktifkan venv dan cek interpreter**
   ```bash
   cd ~/TA-123140205/Code/Baseline-KNN-Gaur
   source .venv/bin/activate
@@ -160,25 +172,27 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Ekspektasi: `.../Baseline-KNN-Gaur/.venv/bin/python`, `Python 3.11.18`.
 
-- [ ] **2.2 — Verifikasi CUDA dari dalam PyTorch**
+- [x] **2.2 — Verifikasi CUDA dari dalam PyTorch**
   ```bash
   python -c "import torch; print('CUDA Available   :', torch.cuda.is_available()); print('Device Count     :', torch.cuda.device_count()); print('Device Name      :', torch.cuda.get_device_name(0)); print('CUDA Version     :', torch.version.cuda); print('VRAM Total (GB)  :', round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2))"
   ```
   Ekspektasi: `True`, 1 device, `NVIDIA GeForce RTX 3070 Ti Laptop GPU`, `12.8`, `7.68`.
+  ✅ **Terverifikasi:** PyTorch `2.11.0+cu128`, CUDA `12.8`, 1 device, VRAM `7.68 GB`.
 
-- [ ] **2.3 — Verifikasi dependensi inti**
+- [x] **2.3 — Verifikasi dependensi inti**
   ```bash
   python -c "import numpy, pandas, scipy, sklearn, matplotlib, librosa, soundfile, tqdm; print('deps OK')"
   ```
+  ✅ **Terverifikasi:** `deps OK` dan `src import OK`.
 
-- [ ] **2.4 — (Hanya jika 2.2 gagal) pasang ulang wheel CUDA**
+- [ ] **2.4 — (Hanya jika 2.2 gagal) pasang ulang wheel CUDA — TIDAK DIPERLUKAN**
   ```bash
   export UV_HTTP_TIMEOUT=300
   uv pip install --force-reinstall torch torchaudio --index-url https://download.pytorch.org/whl/cu128
   uv pip install -r requirements.txt
   ```
 
-- [ ] **2.5 — (Hanya jika venv rusak) buat ulang dari nol**
+- [ ] **2.5 — (Hanya jika venv rusak) buat ulang dari nol — TIDAK DIPERLUKAN**
   ```bash
   rm -rf .venv
   uv venv .venv --python 3.11
@@ -194,18 +208,19 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 3 — Gate Import & Unit Test 8/8 (± 2 menit)
 
-- [ ] **3.1 — Import paket `src` tanpa error**
+- [x] **3.1 — Import paket `src` tanpa error**
   ```bash
   python -c "import src; print('src import OK')"
   ```
 
-- [ ] **3.2 — Jalankan seluruh unit test**
+- [x] **3.2 — Jalankan seluruh unit test**
   ```bash
   python tests/test_baseline.py 2>&1 | tee experiments/results/unit_test_deam.log
   ```
   Ekspektasi: `Ran 8 tests in ~1.3s` dan `OK`.
+  ✅ **Terverifikasi:** `Ran 8 tests in 1.068s — OK`. Log tersimpan di `experiments/results/unit_test_deam.log`.
 
-- [ ] **3.3 — Pastikan 8 pengujian yang dimaksud benar-benar lulus**
+- [x] **3.3 — Pastikan 8 pengujian yang dimaksud benar-benar lulus**
   | # | Test | Yang divalidasi |
   | :---: | :--- | :--- |
   | 01 | `test_01_deam_dataset_integrity` | 1.802 lagu, V/A ∈ [-1, 1] |
@@ -225,7 +240,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 4 — Verifikasi Layer Data & Normalisasi Emosi (± 2 menit)
 
-- [ ] **4.1 — Muat anotasi statis DEAM dan cek jumlah + rentang**
+- [x] **4.1 — Muat anotasi statis DEAM dan cek jumlah + rentang**
   ```bash
   python - <<'PY'
   from src.deam_loader import load_or_generate_deam_dataset, get_default_deam_path
@@ -240,8 +255,9 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Ekspektasi: 1802 lagu; V/A di dalam `[-1, 1]`; `track_id` berawalan `DEAM_`.
   **Jika `track_id` berawalan `TRK_` → path dataset salah, ulangi Fase 0.2.**
+  ✅ **Terverifikasi:** path `.../Baseline-KNN-Gaur/Dataset/DEAM`, **1802 lagu**, 15 fitur, contoh ID `DEAM_0002, DEAM_0003, DEAM_0004`.
 
-- [ ] **4.2 — Cek distribusi kuadran (bahan stratified split & pembahasan)**
+- [x] **4.2 — Cek distribusi kuadran (bahan stratified split & pembahasan)**
   ```bash
   python - <<'PY'
   from src.deam_loader import load_or_generate_deam_dataset
@@ -252,8 +268,9 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   PY
   ```
   Ekspektasi mengikuti `split_summary.json`: Q3 Sad ±41%, Q1 Happy ±33%, Q4 Calm ±13%, Q2 Angry ±13%.
+  ✅ **Terverifikasi:** Q3 Sad **742 (41.18%)**, Q1 Happy **594 (32.96%)**, Q4 Calm **237 (13.15%)**, Q2 Angry **229 (12.71%)**.
 
-- [ ] **4.3 — (Opsional, jembatan ke model usulan) cek anotasi dinamis**
+- [x] **4.3 — (Opsional, jembatan ke model usulan) cek anotasi dinamis**
   ```bash
   python - <<'PY'
   from src.deam_loader import load_deam_dynamic_annotations
@@ -263,17 +280,21 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   PY
   ```
   Baseline tidak memakai ini; hanya untuk memastikan dataset siap untuk penelitian lanjutan.
+  ✅ **Terverifikasi:** valence `(1802, 1224)`, arousal `(1802, 1225)`, kolom dimulai `sample_15000ms`.
 
-- [ ] **4.4 — Tentukan sumber fitur akustik yang dipakai (keputusan eksplisit)**
+- [x] **4.4 — Tentukan sumber fitur akustik yang dipakai (keputusan eksplisit)**
   - **Mode A (cepat, default sekarang):** fitur akustik sintetis deterministik (`random_state=42`) yang dikorelasikan dengan V/A. Cukup untuk menguji kebenaran algoritma, **tetapi bukan bukti akustik nyata**.
   - **Mode B (disarankan untuk Bab Hasil):** fitur akustik nyata dari 1.802 MP3 via Fase 5.
   Catat pilihan ini di log dan di naskah. Jangan mencampur hasil Mode A dan Mode B dalam satu tabel.
+  ✅ **Keputusan saat ini:** seluruh hasil single run memakai **Mode A** (fitur sintetis deterministik), karena `data/processed/` belum ada. Ini sah untuk validasi algoritma, tetapi **bukan** klaim fitur audio nyata. Jika Fase 5 dijalankan, semua hasil wajib diregenerasi sebagai Mode B dan dicatat ulang.
 
 **Definisi selesai Fase 4:** 1802 lagu, ID `DEAM_*`, rentang [-1, 1], distribusi kuadran sesuai dokumen.
 
 ---
 
 # 🔹 FASE 5 — (Opsional namun disarankan) Ekstraksi Fitur Akustik Nyata dari 1.802 MP3 (± 1–2 jam)
+
+> **STATUS: ⬜ BELUM DIJALANKAN.** `data/processed/deam_extracted_features.csv` belum ada. Seluruh hasil saat ini memakai fitur akustik sintetis (Mode A).
 
 > **Peringatan penting:** `src/deam_extractor.py` menelan exception dan **diam-diam** menghasilkan fitur acak jika satu file gagal dibaca. Tidak ada tanda error di output. Karena itu validasi 5.2 wajib.
 > **Ekstraksi tidak bisa resume.** Hasil baru ditulis di akhir. Jangan Ctrl+C di tengah jalan. Jika butuh aman, jalankan di `tmux`/`nohup`.
@@ -349,7 +370,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 6 — Verifikasi Pipeline Preprocessing (± 2 menit)
 
-- [ ] **6.1 — Jalankan preprocessing dan catat explained variance**
+- [x] **6.1 — Jalankan preprocessing dan catat explained variance**
   ```bash
   python - <<'PY'
   import numpy as np
@@ -369,9 +390,11 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   PY
   ```
   Ekspektasi: 12 kolom, skala [-1, 1]. Explained variance tergantung Mode A/B; catat angkanya untuk naskah.
+  ✅ **Terverifikasi (Mode A):** 1.802 baris, **12 komponen PCA**, explained variance **82.26%**, rentang **-1.0 … 1.0**.
 
-- [ ] **6.2 — Pastikan urutan transform benar (anti-leakage)**
+- [x] **6.2 — Pastikan urutan transform benar (anti-leakage)**
   Baca `src/preprocessing.py`: `fit_transform` hanya boleh dipanggil pada Train (atau pada seluruh katalog untuk eksperimen retrieval baseline, dengan catatan metodologis). `transform` dipakai untuk Val/Test. Jangan memanggil `fit` pada Val/Test.
+  ✅ **Keputusan:** eksperimen retrieval baseline memanggil `fit_transform` pada **seluruh katalog 1.802 lagu** (sesuai perilaku asli Gaur), bukan pada manifest Train. Ini adalah pilihan metodologis yang harus dinyatakan eksplisit di naskah; split 70/15/15 disiapkan untuk evaluasi model usulan, bukan untuk baseline retrieval ini.
 
 **Definisi selesai Fase 6:** 12 komponen PCA, skala [-1, 1], explained variance tercatat.
 
@@ -379,7 +402,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 7 — Stratified Split & Verifikasi Anti-Data Leakage (± 5 menit)
 
-- [ ] **7.1 — Cek manifest yang sudah ada**
+- [x] **7.1 — Cek manifest yang sudah ada**
   ```bash
   python - <<'PY'
   import pandas as pd, json
@@ -397,15 +420,17 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   PY
   ```
   Ekspektasi: 1261 / 270 / 271, semua irisan 0.
+  ✅ **Terverifikasi:** **1261 / 270 / 271** (total 1802); irisan Train-Val = 0, Train-Test = 0, Val-Test = 0 → `ZERO LEAKAGE OK`.
 
-- [ ] **7.2 — Regenerasi split (hanya jika Fase 5 mengubah dataset atau ingin split baru)**
+- [ ] **7.2 — Regenerasi split (hanya jika Fase 5 mengubah dataset atau ingin split baru) — BELUM, tidak diperlukan selama dataset anotasi tidak berubah**
   ```bash
   python -c "from src import load_or_generate_deam_dataset, stratified_split_deam, assign_emotion_quadrant, save_split_manifests; df, _ = load_or_generate_deam_dataset(); df['quadrant'] = assign_emotion_quadrant(df); tr, va, te = stratified_split_deam(df, 0.7, 0.15, 0.15); save_split_manifests(tr, va, te, 'experiments/splits'); print('Manifest split tersimpan:', len(tr), len(va), len(te))"
   ```
   Ulangi 7.1 setelah regenerasi. Catat perubahan angka bila ada.
 
-- [ ] **7.3 — Pastikan split dipakai konsisten**
+- [x] **7.3 — Pastikan split dipakai konsisten**
   Putuskan dan tulis di log: apakah eksperimen retrieval (single & batch) memakai seluruh 1.802 katalog atau hanya Train. Baseline Gaur melakukan retrieval pada katalog penuh; split 70/15/15 disiapkan untuk evaluasi model usulan. Jika memakai seluruh katalog, nyatakan eksplisit agar tidak dituduh leakage.
+  ✅ **Keputusan:** eksperimen retrieval baseline memakai **seluruh 1.802 katalog** (bukan hanya Train). Split 70/15/15 tetap disimpan sebagai artefak dan akan dipakai untuk evaluasi model usulan. Pernyataan ini wajib disalin ke naskah Bab Metodologi.
 
 **Definisi selesai Fase 7:** 1261/270/271, irisan 0, keputusan penggunaan split tercatat.
 
@@ -453,7 +478,18 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
 
 - [x] **8.5 — Catat metrik hasil ke log/naskah**
-  Catat `Smoothness (PCC)`, `Evenness V-A Var`, `Evenness Audio Var`, `Mean V-A Step`, `Mean Audio Step` untuk ketiga metrik. Jangan menyalin angka dari dokumen lama — angka lama berasal dari run sintetis dan berbeda.
+  Catat `Smoothness (PCC)`, `Evenness V-A Var`, `Evenness Audio Var`, `Mean V-A Step`, `Mean Audio Step` untuk ketiga metrik. Angka di bawah adalah hasil run DEAM terbaru yang sudah diverifikasi, bukan salinan asumsi.
+
+  ✅ **Hasil run 19 Nov 2026 (DEAM, Mode A, N=12, K=7):**
+
+  | Metrik | Smoothness (PCC) | Evenness V-A Var | Evenness Audio Var | Mean V-A Step | Mean Audio Step |
+  | :--- | ---: | ---: | ---: | ---: | ---: |
+  | Cosine | **0.978100** | 0.000349 | 0.005409 | 0.043573 | 0.350620 |
+  | Euclidean | **0.987591** | 0.000238 | 0.005082 | 0.044077 | 0.310623 |
+  | Manhattan | **0.976171** | 0.000290 | 0.004930 | 0.043540 | 0.289535 |
+
+  Playlist: `DEAM_2022` (Q3, V=-0.300, A=-0.150) → `DEAM_1879` (Q1, V=0.100, A=0.350), 12 langkah unik.
+  Artefak: `metrics_comparison_deam.csv`, `baseline_cosine_deam_playlist.csv`, `baseline_deam_traversal_plot.png`, `run_single_deam.log`.
 
 - [x] **8.6 — Buka plot untuk inspeksi visual**
   `experiments/results/baseline_deam_traversal_plot.png` harus menampilkan lintasan diagonal dari kiri-bawah (Q3) ke kanan-atas (Q1) pada bidang Russell.
@@ -463,6 +499,8 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 ---
 
 # 🔹 FASE 9 — Batch Quadrant Benchmark 540 Playlist (± 1–5 menit)
+
+> **STATUS: ⬜ BELUM DIJALANKAN.** `batch_quadrant_experiments_deam.csv` belum ada. Ini pekerjaan inti berikutnya.
 
 - [ ] **9.1 — Jalankan batch 6 rute**
   ```bash
@@ -522,11 +560,11 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 - [ ] **10.1 — Bandingkan hasil dengan kriteria keberhasilan**
   | Metrik | Rentang | Arah optimal | Ekspektasi baseline DEAM |
   | :--- | :---: | :--- | :--- |
-  | Smoothness (PCC) | [0, 1] | mendekati 1 | > 0.90 (dokumen lama 0.978–0.987, angka sintetis) |
-  | Evenness V-A Var | ≥ 0 | mendekati 0 | kecil (orde 10⁻³–10⁻⁴) |
-  | Evenness Audio Var | ≥ 0 | mendekati 0 | kecil |
-  | Mean V-A Step | [0, √2] | tergantung N | ± 0.04–0.06 untuk N=12 |
-  Jangan memaksa hasil baru sama dengan angka dokumen lama. Jika berbeda, jelaskan penyebabnya (fitur nyata vs sintetis, path dataset, seed).
+  | Smoothness (PCC) | [0, 1] | mendekati 1 | > 0.90; run DEAM terverifikasi **0.976–0.988** |
+  | Evenness V-A Var | ≥ 0 | mendekati 0 | kecil (orde 10⁻³–10⁻⁴); run DEAM **0.000238–0.000349** |
+  | Evenness Audio Var | ≥ 0 | mendekati 0 | kecil; run DEAM **0.004930–0.005409** |
+  | Mean V-A Step | [0, √2] | tergantung N | ± 0.04–0.06 untuk N=12; run DEAM **0.0435–0.0441** |
+  Angka 0.978–0.988 tersebut berasal dari run **DEAM** (koordinat V/A asli) dan berhasil direproduksi persis pada 19 Nov 2026. Catatan penting: fitur akustiknya masih **Mode A (sintetis)**, sehingga Smoothness/Evenness V-A valid sebagai perilaku lintasan emosi, tetapi klaim transisi akustik nyata tetap mensyaratkan Fase 5. Jika run berikutnya berbeda, jelaskan penyebabnya (fitur nyata vs sintetis, seed, K/N) — jangan mengubah angka secara manual.
 
 - [ ] **10.2 — Bandingkan Cosine vs Euclidean vs Manhattan**
   Tentukan pemenang berdasarkan Smoothness dan Evenness, lalu tulis interpretasinya (bukan sekadar tabel).
@@ -545,8 +583,23 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ls -lh experiments/results/archive_*
   ```
 
-- [ ] **10.6 — Catat provenance run (wajib untuk reproduksibilitas)**
+- [x] **10.6 — Catat provenance run (wajib untuk reproduksibilitas)**
   Tulis di log/naskah: commit hash, mode fitur (nyata/sintetis), jumlah lagu, K, N, metrik, seed, versi torch/CUDA, tanggal.
+
+  Template provenance untuk run single yang sudah ada:
+  ```text
+  Commit        : 6961158 (fix conflicts + docs)
+  Tanggal       : 19 November 2026
+  Dataset       : DEAM, 1.802 tracks, track_id DEAM_*
+  Fitur akustik : Mode A (synthetic deterministic, random_state=42)
+  Preprocessing : IQR 5.5 / 20 bins -> Yeo-Johnson -> PCA 12D -> MinMax [-1,1]
+  PCA variance  : 82.26% (single run)
+  KD-Tree points: 1.113 unique coordinates
+  Parameter     : N=12, K=7, metric=Cosine/Euclidean/Manhattan
+  Hardware      : RTX 3070 Ti Laptop GPU, driver 620.70.06, CUDA 12.8
+  PyTorch       : 2.11.0+cu128 | Python 3.11.18 | uv 0.13.9
+  ```
+  ↑ Salin ke naskah dan perbarui bila Fase 5/9 dijalankan.
 
 **Definisi selesai Fase 10:** tabel perbandingan, analisis per rute, analisis K/N, arsip hasil, dan provenance tercatat.
 
@@ -576,6 +629,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   git commit -m "feat: verified DEAM baseline (single + 540 batch) on local CUDA RTX 3070 Ti"
   git log --oneline -5
   ```
+  Catatan: `experiments/results/*.log`, `*.csv`, dan `*.png` saat ini **di-ignore** oleh `.gitignore`, sehingga `git add experiments` tidak akan memasukkan log/artefak. Itu disengaja; lihat 11.4 bila ingin mempublikasikannya.
 
 - [ ] **11.4 — Push ke GitHub**
   ```bash
@@ -606,19 +660,19 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 Centang semuanya sebelum menyatakan eksperimen selesai:
 
-- [ ] Tidak ada merge conflict marker di seluruh repo.
-- [ ] `torch.cuda.is_available() == True` dan GPU name benar.
-- [ ] Dataset terdeteksi 1.802 lagu dengan `track_id` `DEAM_*`.
-- [ ] Unit test 8/8 `OK`, log tersimpan.
-- [ ] Sumber fitur akustik dinyatakan eksplisit (nyata / sintetis) dan konsisten di semua hasil.
-- [ ] Preprocessing menghasilkan 12 komponen PCA dalam skala [-1, 1]; explained variance tercatat.
-- [ ] Split 1261/270/271 tanpa irisan (jika dipakai).
-- [ ] `run_experiment.py` sukses, playlist 12 lagu unik Q3 → Q1, plot valid.
+- [x] Tidak ada merge conflict marker di seluruh repo.
+- [x] `torch.cuda.is_available() == True` dan GPU name benar.
+- [x] Dataset terdeteksi 1.802 lagu dengan `track_id` `DEAM_*`.
+- [x] Unit test 8/8 `OK`, log tersimpan.
+- [x] Sumber fitur akustik dinyatakan eksplisit (Mode A / sintetis) dan konsisten di semua hasil.
+- [x] Preprocessing menghasilkan 12 komponen PCA dalam skala [-1, 1]; explained variance tercatat (82.26%).
+- [x] Split 1261/270/271 tanpa irisan; keputusan pemakaian katalog penuh tercatat.
+- [x] `run_experiment.py` sukses, playlist 12 lagu unik Q3 → Q1, plot valid.
 - [ ] `run_quadrant_experiments.py` menghasilkan **tepat 540 baris**, 6 rute lengkap, tanpa NaN.
 - [ ] Tabel agregat per rute/metrik tersimpan.
-- [ ] Provenance run (commit, seed, versi, mode fitur, tanggal) tercatat.
+- [x] Provenance run (commit, seed, versi, mode fitur, tanggal) tercatat di Fase 10.6.
 - [ ] Commit + push selesai; file besar tetap ter-ignore.
-- [ ] Angka di dokumen panduan sudah disinkronkan dengan hasil run terbaru.
+- [ ] Angka di dokumen panduan (`PANDUAN_VALIDASI_DAN_TESTING.md`, `TUTORIAL_RUN_CUDA.md`) sudah disinkronkan dengan hasil run terbaru.
 
 ---
 
@@ -673,6 +727,8 @@ python experiments/run_quadrant_experiments.py
 
 # ⏱️ Lampiran C — Estimasi Waktu
 
+> Fase 0–4 dan 6–8 sudah selesai. Estimasi di bawah adalah acuan total bila pipeline dijalankan ulang dari nol.
+
 | Fase | Estimasi | Catatan |
 | :--- | :---: | :--- |
 | 0 — Resolve conflict | 10 menit | Blocker, kerjakan pertama |
@@ -691,5 +747,13 @@ python experiments/run_quadrant_experiments.py
 | **Total dengan ekstraksi** | **± 2,5–3,5 jam** | Tergantung durasi dekode MP3 |
 
 ---
+
+## 📝 Riwayat Pembaruan
+
+| Tanggal | Perubahan |
+| :--- | :--- |
+| 19 Nov 2026 (awal) | Dokumen dibuat; menandai blocker merge conflict dan artefak sintetis. |
+| 19 Nov 2026 (update 1) | Konflik diselesaikan (`14aa2ad`); Fase 0 & 8 ditandai selesai; unit test 8/8. |
+| 19 Nov 2026 (update 2) | Fase 1–4, 6, 7 diverifikasi langsung; status tabel disinkronkan; metrik single run dicatat; keputusan Mode A dan katalog penuh didokumentasikan; Fase 5 & 9 ditandai belum dijalankan. |
 
 *Dokumen ini dibuat untuk kondisi nyata laptop ini per 19 November 2026 dan sengaja menandai blocker, artefak stale, serta jebakan fallback senyap agar tidak ada langkah yang terlewat.*
