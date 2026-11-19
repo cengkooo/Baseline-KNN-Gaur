@@ -18,7 +18,7 @@ Metrics Implemented:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from scipy.stats import pearsonr
 
 

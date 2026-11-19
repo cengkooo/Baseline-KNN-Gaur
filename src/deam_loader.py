@@ -19,32 +19,17 @@ from typing import Dict, List, Optional, Tuple
 
 
 def get_default_deam_path() -> str:
-    """Finds the absolute path to EXPERIMENT/Dataset/DEAM."""
+    """Finds the absolute path to Dataset/DEAM (repo-relative, symlink-safe)."""
     current_file_dir = os.path.dirname(os.path.abspath(__file__))
-    # EXPERIMENT/Code/baseline_gaur/src -> EXPERIMENT/Code/baseline_gaur -> EXPERIMENT/Code -> EXPERIMENT
-    experiment_dir = os.path.abspath(os.path.join(current_file_dir, "..", "..", ".."))
-    candidate_exp = os.path.join(experiment_dir, "Dataset", "DEAM")
-    if os.path.exists(candidate_exp):
-        return candidate_exp
-        
-    # Check relative to repo root
-    repo_root = os.path.abspath(os.path.join(current_file_dir, "..", "..", "..", ".."))
-    candidate_repo = os.path.join(repo_root, "EXPERIMENT", "Dataset", "DEAM")
-    if os.path.exists(candidate_repo):
-        return candidate_repo
-        
-    # Check directly relative to cwd
-    candidate_cwd = os.path.abspath(os.path.join("EXPERIMENT", "Dataset", "DEAM"))
-    if os.path.exists(candidate_cwd):
-        return candidate_cwd
-        
-    # Fallback to old path if exists
-    candidate_old = os.path.join(repo_root, "Dataset", "DEAM")
-    if os.path.exists(candidate_old):
-        return candidate_old
-        
-    # Fallback absolute path
-    return r"D:\Kuliah\Semester 7\Tugas Akhir\Proposal Tugas Akhir\EXPERIMENT\Dataset\DEAM"
+    repo_root = os.path.abspath(os.path.join(current_file_dir, ".."))
+    candidates = [
+        os.path.join(repo_root, "Dataset", "DEAM"),
+        os.path.abspath(os.path.join("Dataset", "DEAM")),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return candidates[0]
 
 
 def load_deam_static_annotations(deam_root: Optional[str] = None) -> pd.DataFrame:

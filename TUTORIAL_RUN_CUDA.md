@@ -1,58 +1,68 @@
 # ⚡ Tutorial: Menjalankan Baseline Eksperimen dengan Akselerasi CUDA (NVIDIA GeForce RTX 3070 Ti)
 
-> **Repositori Target:** `EXPERIMENT/Code/baseline_gaur/`  
+> **Repositori:** `~/TA-123140205/Code/Baseline-KNN-Gaur/`  
 > **Target Hardware:** GPU NVIDIA GeForce RTX 3070 Ti (8GB GDDR6X VRAM, CUDA Compute Capability 8.6)  
-> **Environment Manager:** `uv` (Astral)  
-> **Framework:** PyTorch 2.x dengan CUDA 12.1 / 11.8 Backend  
+> **OS:** CachyOS Linux (Arch-based) — semua perintah memakai shell `bash`  
+> **Environment Manager:** `uv` (Astral) + CPython 3.11  
+> **Framework:** PyTorch 2.x dengan wheel CUDA 12.8 (`cu128`)  
 > **Dataset Utama:** DEAM (1.802 audio tracks & anotasi statis/dinamis)
 
 ---
 
 ## 📋 1. Prasyarat Sistem & Driver
 
-Sebelum memulai, pastikan sistem telah memenuhi persyaratan berikut:
-1. **NVIDIA Display Driver:** Versi $\ge 530.xx$ (mendukung CUDA 12.x).
-2. **Cek Driver GPU di Terminal:**
-   ```powershell
+1. **Driver NVIDIA proprietary/open:** versi $\ge 570$ (mendukung CUDA 12.8+). Di CachyOS:
+   ```bash
+   sudo pacman -S --needed nvidia-utils nvidia-settings
+   ```
+2. **Cek driver GPU:**
+   ```bash
    nvidia-smi
    ```
-   *Pastikan kartu grafis `NVIDIA GeForce RTX 3070 Ti` terdeteksi beserta versi CUDA Driver.*
-3. **Python:** Python 3.10, 3.11, atau 3.12 (disarankan Python 3.11).
-4. **Tool `uv`:** Paket manager super cepat dari Astral. Jika belum ada:
-   ```powershell
-   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   *Pastikan `NVIDIA GeForce RTX 3070 Ti` terdeteksi, beserta versi driver dan `CUDA UMD Version`-nya.*
+3. **Python:** `uv` akan mengunduh CPython **3.11** secara otomatis.
+   > Jangan memakai `python3` sistem (CachyOS: 3.14) — `librosa`/`numba` belum stabil di sana.
+4. **Tool `uv`:**
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   source ~/.local/bin/env    # atau buka terminal baru
+   uv --version
    ```
 
 ---
 
 ## 🛠️ 2. Langkah Demi Langkah Setup Environment dengan `uv`
 
-Buka terminal **PowerShell** dan arahkan ke direktori proyek:
+```bash
+# 1. Masuk ke direktori proyek
+cd ~/TA-123140205/Code/Baseline-KNN-Gaur
 
-```powershell
-# 1. Masuk ke direktori baseline proyek
-cd "D:\Kuliah\Semester 7\Tugas Akhir\Proposal Tugas Akhir\EXPERIMENT\Code\baseline_gaur"
-
-# 2. Buat virtual environment (.venv) dengan uv berbasis Python 3.11
+# 2. Buat virtual environment (.venv) berbasis Python 3.11
 uv venv .venv --python 3.11
 
 # 3. Aktivasi virtual environment
-# Pada Windows PowerShell:
-.venv\Scripts\Activate.ps1
-# (Jika muncul batasan eksekusi skrip, jalankan: Set-ExecutionPolicy Unrestricted -Scope Process)
+source .venv/bin/activate
+
+# (kalau shell-nya fish)
+# source .venv/bin/activate.fish
+
+# Pastikan interpreter yang aktif sudah benar
+which python && python -V
 ```
 
 ---
 
-## 📦 3. Instalasi PyTorch dengan Dukungan CUDA 12.x
+## 📦 3. Instalasi PyTorch dengan Dukungan CUDA 12.8
 
-Jalankan instalasi PyTorch yang terkompilasi khusus untuk CUDA (Compute 8.6 untuk arsitektur Ampere RTX 3070 Ti):
+```bash
+# Wheel CUDA besar (±5 GB). Set timeout lebih panjang agar tidak gagal di tengah jalan.
+export UV_HTTP_TIMEOUT=300
 
-```powershell
-# Install PyTorch + Torchaudio dengan build CUDA 12.1
-uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# Install PyTorch + Torchaudio dengan build CUDA 12.8 (Compute 8.6, Ampere)
+uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # Install dependensi pelengkap dari requirements.txt
+# (torch>=2.1.0 sudah terpenuhi oleh build CUDA di atas, jadi tidak diunduh ulang)
 uv pip install -r requirements.txt
 ```
 
@@ -60,19 +70,17 @@ uv pip install -r requirements.txt
 
 ## 🔍 4. Verifikasi Status Akselerasi CUDA di Terminal
 
-Jalankan skrip satu baris berikut untuk memverifikasi bahwa PyTorch telah mendeteksi GPU RTX 3070 Ti secara aktif:
-
-```powershell
+```bash
 python -c "import torch; print('CUDA Available   :', torch.cuda.is_available()); print('Device Count     :', torch.cuda.device_count()); print('Device Name      :', torch.cuda.get_device_name(0)); print('CUDA Version     :', torch.version.cuda); print('VRAM Total (GB)  :', round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2))"
 ```
 
-**Ekspektasi Output:**
+**Ekspektasi Output (RTX 3070 Ti Laptop GPU, driver 620.x):**
 ```text
 CUDA Available   : True
 Device Count     : 1
-Device Name      : NVIDIA GeForce RTX 3070 Ti
-CUDA Version     : 12.1
-VRAM Total (GB)  : 8.0
+Device Name      : NVIDIA GeForce RTX 3070 Ti Laptop GPU
+CUDA Version     : 12.8
+VRAM Total (GB)  : 7.68
 ```
 
 ---
@@ -80,23 +88,31 @@ VRAM Total (GB)  : 8.0
 ## 🚀 5. Cara Menjalankan Eksperimen pada CUDA
 
 ### Opsi A: Eksekusi Cepat Single Traversal (*Smoke Test*)
-Menguji transisi emosi diagonal dari **Kuadran 3 (Sad)** ke **Kuadran 1 (Happy)** pada dataset 1.802 lagu DEAM:
+Menguji transisi emosi diagonal dari **Kuadran 3 (Sad)** ke **Kuadran 1 (Happy)**:
 
-```powershell
+```bash
 python experiments/run_experiment.py --playlist_length 12 --k_neighbors 7
 ```
 
-**Artefak yang Dihasilkan di `experiments/results/`:**
+**Output yang diharapkan** (tanpa dataset DEAM → otomatis sintetis, ±5 detik):
+```text
+[⚡ GPU ACTIVE] Using: NVIDIA GeForce RTX 3070 Ti Laptop GPU | CUDA: 12.8
+[RTX 3070 Ti VRAM] Allocated: 0.00 MB | Reserved: 0.00 MB
+[*] Generating synthetic dataset (1,500 tracks)...
+[+] PCA 12 Components Fitted. Cumulative Explained Variance: 85.70%
+[+] KD-Tree indexed over 1500 unique coordinate points.
+[V] DEAM Baseline experiment execution completed successfully!
+```
+
+**Artefak yang dihasilkan di `experiments/results/`:**
 * `metrics_comparison_deam.csv`: Perbandingan metrik jarak Cosine vs Euclidean vs Manhattan.
 * `baseline_cosine_deam_playlist.csv`: Urutan 12 lagu hasil rekomendasi playlist.
 * `baseline_deam_traversal_plot.png`: Grafik visualisasi pergerakan emosi 2D pada Russell Circumplex Model.
 
----
-
 ### Opsi B: Batch Benchmark Lintas 6 Rute 4-Kuadran
-Mengevaluasi ratusan playlist melintasi rute Diagonal, Horizontal, dan Vertikal menggunakan paralelisasi tensor PyTorch CUDA:
+Mengevaluasi ratusan playlist melintasi rute Diagonal, Horizontal, dan Vertikal:
 
-```powershell
+```bash
 python experiments/run_quadrant_experiments.py
 ```
 
@@ -106,24 +122,22 @@ Skrip ini akan menguji kombinasi:
 - **Panjang Playlist $N$:** $N \in \{5, 12, 19\}$.
 - **Metrik Jarak:** Cosine Similarity vs Euclidean Distance.
 
-**Hasil Output:**
-* Tabel komparasi lengkap tersimpan di: `experiments/results/batch_quadrant_experiments_deam.csv`.
-
----
+**Hasil Output:** `experiments/results/batch_quadrant_experiments_deam.csv`.
 
 ### Opsi C: Ekstraksi Fitur Akustik Audio DEAM (Batch MP3)
-Jika Anda ingin mengekstrak ulang 15 fitur akustik audio mentah dari 1.802 file `.mp3` di `EXPERIMENT/Dataset/DEAM/DEAM_audio/MEMD_audio`:
+Jika ingin mengekstrak ulang 15 fitur akustik dari 1.802 file `.mp3` di `Dataset/DEAM/DEAM_audio/MEMD_audio`:
 
-```powershell
+```bash
 python src/deam_extractor.py
 ```
+*Fitur tersimpan ke `data/processed/deam_extracted_features.csv`.*
 
 ---
 
 ### Opsi D: Partisi Dataset DEAM (Stratified Split & Anti-Data Leakage)
 Membagi 1.802 lagu DEAM secara terstratifikasi berdasarkan 4 Kuadran Emosi Russell (70% Train / 15% Val / 15% Test) untuk memastikan *Zero Data Leakage*:
 
-```powershell
+```bash
 python -c "from src import load_or_generate_deam_dataset, stratified_split_deam, assign_emotion_quadrant, save_split_manifests; df, _ = load_or_generate_deam_dataset(); df['quadrant'] = assign_emotion_quadrant(df); tr, va, te = stratified_split_deam(df, 0.7, 0.15, 0.15); save_split_manifests(tr, va, te, 'experiments/splits'); print('Manifest split sukses disimpan!')"
 ```
 
@@ -132,47 +146,89 @@ python -c "from src import load_or_generate_deam_dataset, stratified_split_deam,
 * `deam_val_manifest.csv`: 270 lagu (15% data validasi penyesuaian hyperparameter $K$ dan $N$).
 * `deam_test_manifest.csv`: 271 lagu (15% data uji holdout murni bebas data leakage).
 * `split_summary.json`: Rekapitulasi jumlah dan persentase trek per kuadran secara presisi.
-*Fitur akan tersimpan ke `data/processed/deam_extracted_features.csv`.*
 
 ---
 
-## ⚡ 6. Mengapa Menggunakan Akselerasi CUDA pada Baseline Gaur?
+## 📁 6. Catatan Dataset DEAM
 
-| Komponen Eksperimen | Eksekusi CPU Murni | Akselerasi CUDA PyTorch (RTX 3070 Ti) |
+`src/deam_loader.py` mencari anotasi di:
+
+```text
+Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/song_level/*.csv
+Dataset/DEAM/DEAM_audio/MEMD_audio/{song_id}.mp3
+```
+
+Kalau folder `Dataset/DEAM/` tidak ada:
+- `run_experiment.py` otomatis memakai **dataset sintetis 1.500 track** (pipeline tetap bisa diuji).
+- `run_quadrant_experiments.py` akan gagal karena wajib membaca anotasi DEAM.
+
+Jalankan dengan path lain bila dataset disimpan di luar repo:
+```bash
+python experiments/run_experiment.py --deam_path /path/ke/Dataset/DEAM
+```
+
+---
+
+## ⚡ 7. Seberapa Penting CUDA untuk Baseline Ini?
+
+| Komponen Eksperimen | CPU (NumPy/SciPy) | PyTorch CUDA (RTX 3070 Ti) |
 | :--- | :--- | :--- |
-| **Stage 2 Distance Re-ranking** | Serial per kandidat ($O(K \times D)$) | Paralel serentak pada CUDA cores via `torch.nn.functional.cosine_similarity` |
-| **Batch Benchmark 120k Playlist** | Membutuhkan waktu $\approx 3-4$ jam | Selesai dalam $\approx 2-5$ menit melalui tensor batching |
-| **Penggunaan VRAM** | 0 MB VRAM (Beban di RAM Sistem) | $\approx 10-50$ MB VRAM (Sangat hemat pada kapasitas 8GB VRAM 3070 Ti) |
-| **Kesiapan Model Lanjutan** | Tidak siap untuk deep learning | Siap langsung menampung model usulan Trajectory RNN/Transformer |
+| **Stage 2 distance re-ranking** | Loop serial per kandidat | `torch.cdist` / `cosine_similarity` di CUDA cores |
+| **Beban komputasi aktual** | $K \le 15$ kandidat × 12 dimensi per langkah | sama, hanya dipindah ke GPU |
+| **Waktu batch benchmark** | Detik | Detik (perbedaan tidak terasa) |
+| **Penggunaan VRAM** | 0 MB | $\approx 10\text{–}50$ MB |
+| **Kesiapan model lanjutan** | Terbatas | Siap menampung Trajectory RNN/Transformer |
+
+**Kesimpulan jujur:** baseline KNN ini komputasinya sangat kecil, jadi CUDA **bukan** untuk
+mempercepat baseline — CUDA dipakai agar pipeline sudah siap untuk model deep learning
+lanjutan dan agar jalur kode GPU (`src/utils_cuda.py`, `src/stage2_selector.py`) terverifikasi jalan.
 
 ---
 
-## 🔧 7. Troubleshooting & Solusi Masalah Umum
+## 🔧 8. Troubleshooting (Linux / CachyOS)
 
 ### 1. `torch.cuda.is_available()` mengembalikan `False`
-* **Penyebab:** PyTorch terinstal versi CPU-only dari indeks default PyPI.
-* **Solusi:** Hapus dan instal ulang dengan flag `--index-url`:
-  ```powershell
-  uv pip uninstall torch torchvision torchaudio
-  uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+* **Penyebab:** PyTorch terinstal dari PyPI default, bukan wheel CUDA.
+* **Solusi:**
+  ```bash
+  uv pip uninstall torch torchaudio
+  uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+  ```
+* **Cek juga:** `nvidia-smi` harus jalan tanpa error dan driver sudah ter-load
+  (`lsmod | grep nvidia`). Kalau `nvidia-smi` gagal, driver belum terpasang benar.
+
+### 2. Install torch gagal: `error sending request for url (https://pypi.nvidia.com/...)`
+* **Penyebab:** unduhan wheel NVIDIA besar dan koneksi lambat.
+* **Solusi:** ulangi dengan timeout lebih panjang (cache `uv` akan melanjutkan file yang sudah ada):
+  ```bash
+  export UV_HTTP_TIMEOUT=300
+  uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
   ```
 
-### 2. Error `ExecutionPolicy` saat aktivasi virtualenv di PowerShell
-* **Solusi:** Buka PowerShell dan jalankan:
-  ```powershell
-  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+### 3. `uv venv` memakai Python 3.14 / dependency gagal build
+* **Solusi:** buat ulang venv dengan versi eksplisit:
+  ```bash
+  rm -rf .venv && uv venv .venv --python 3.11
   ```
 
-### 3. Out of Memory (OOM) pada VRAM
-* **Solusi:** Model baseline KNN hanya mengonsumsi $< 100$ MB VRAM. Jika OOM terjadi, pastikan tidak ada proses training model besar lain (misal: Stable Diffusion atau LLM) yang sedang berjalan di background. Cek dengan `nvidia-smi`.
+### 4. Modul tidak ditemukan setelah aktivasi
+* **Penyebab:** venv belum aktif, atau perintah dijalankan dengan `python` sistem.
+* **Solusi:** `source .venv/bin/activate`, lalu pastikan `which python` menunjuk ke
+  `.../Baseline-KNN-Gaur/.venv/bin/python`. Alternatif tanpa aktivasi:
+  ```bash
+  uv run python experiments/run_experiment.py
+  ```
+
+### 5. Out of Memory (OOM) pada VRAM
+* Model baseline KNN hanya memakai $< 100$ MB VRAM. Kalau OOM, cek proses lain lewat `nvidia-smi`.
 
 ---
 
-## 🐙 8. Panduan Git Push ke Repositori GitHub
+## 🐙 9. Panduan Git Push ke Repositori GitHub
 
-Karena proyek telah dilengkapi `.gitignore`, seluruh file biner besar (audio MP3, cache tensor `.pt`, dan folder `.venv`) otomatis diabaikan:
+`.gitignore` sudah mengecualikan file biner besar (audio MP3, cache tensor `.pt`, `.venv`):
 
-```powershell
+```bash
 # 1. Inisialisasi repo (jika belum)
 git init
 git branch -M main
@@ -183,7 +239,7 @@ git add .
 # 3. Commit
 git commit -m "feat: complete baseline Gaur KNN on DEAM with PyTorch CUDA RTX 3070 Ti"
 
-# 4. Tambahkan remote repository GitHub Anda
+# 4. Tambahkan remote repository GitHub
 git remote add origin https://github.com/USERNAME/REPO-NAME.git
 
 # 5. Push ke GitHub

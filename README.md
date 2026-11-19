@@ -1,13 +1,14 @@
 # Baseline Model Replication: Shaurya Gaur (2023 / EvoMUSART 2024)
 ## 🎯 Primary Dataset: DEAM (Database for Emotion Analysis in Music)
-### ⚡ PyTorch CUDA (NVIDIA GeForce RTX 3070 Ti) & Environment `uv`
+### ⚡ PyTorch CUDA (NVIDIA GeForce RTX 3070 Ti) & Environment `uv` on CachyOS Linux
 #### https://drive.google.com/drive/folders/1YIyq1PhKwOklye8QLa1nu56IjKw8oLUn
 
 > **Paper Title:** *Mood-Dynamic Playlist: Interpolating a Path of Emotions Using a KNN Algorithm*  
 > **Author:** Shaurya Gaur (Master's Thesis, University of Victoria / Springer EvoMUSART 2024)  
 > **Primary Dataset:** **DEAM (`EXPERIMENT/Dataset/DEAM/`)** — 1,802 audio tracks (`.mp3`, 45s) with static & dynamic (2 Hz) emotion annotations.  
 > **Hardware Target:** NVIDIA GeForce RTX 3070 Ti (8GB GDDR6X, CUDA Compute 8.6) + PyTorch 2.x  
-> **Package / Environment Manager:** `uv` (Astral)  
+> **OS Target:** CachyOS Linux (Arch-based) — semua perintah memakai shell `bash`  
+> **Package / Environment Manager:** `uv` (Astral), virtualenv Python 3.11  
 > **Academic Standard:** Open Data ITERA Bab 8 & Code Walkthrough Ready.
 
 ---
@@ -15,7 +16,7 @@
 ## 📁 Repository Structure
 
 ```text
-EXPERIMENT/Code/baseline_gaur/
+Baseline-KNN-Gaur/
 ├── .gitignore                          # Excludes large audio files, venv, and checkpoints
 ├── pyproject.toml                      # Standard PEP 621 metadata & uv dependencies
 ├── requirements.txt                    # Python dependencies (PyTorch CUDA, librosa, etc.)
@@ -85,46 +86,66 @@ Due to severe class imbalance in DEAM (Sad tracks account for ~41% while Angry a
    - **Catalog Pool (80%):** Populates the KD-Tree search space.
    - **Query Seeds (20%):** Serves exclusively as unseen start ($S_0$) and destination ($S_N$) waypoints.
 3. **Execution Command:**
-   ```powershell
+   ```bash
    python -c "from src import load_or_generate_deam_dataset, stratified_split_deam, assign_emotion_quadrant, save_split_manifests; df, _ = load_or_generate_deam_dataset(); df['quadrant'] = assign_emotion_quadrant(df); tr, va, te = stratified_split_deam(df, 0.7, 0.15, 0.15); save_split_manifests(tr, va, te, 'experiments/splits')"
    ```
 
 ---
 
-## 🚀 Setup & Execution Guide
+## 🚀 Setup & Execution Guide (CachyOS / Linux)
+
+### 0. Prasyarat Sistem
+```bash
+# Driver NVIDIA + utilitas (CachyOS / Arch-based)
+sudo pacman -S --needed nvidia-utils nvidia-settings
+nvidia-smi          # harus mendeteksi "NVIDIA GeForce RTX 3070 Ti" + versi driver/CUDA
+
+# uv (kalau belum ada)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv --version
+```
+> Catatan: Python sistem di CachyOS adalah 3.14. Jangan pakai itu — `uv` akan mengunduh
+> CPython 3.11 otomatis karena `librosa`/`numba` belum stabil di 3.14.
 
 ### 1. Virtual Environment Setup with `uv`
-```powershell
+```bash
 # Navigate to project folder
-cd "EXPERIMENT/Code/baseline_gaur"
+cd ~/TA-123140205/Code/Baseline-KNN-Gaur
 
 # Create virtual environment with Python 3.11
 uv venv .venv --python 3.11
 
 # Activate virtual environment
-.venv\Scripts\activate   # Windows PowerShell
-# source .venv/bin/activate  # Linux / macOS
+source .venv/bin/activate        # bash / zsh
+# source .venv/bin/activate.fish # kalau shell-nya fish
 ```
 
 ### 2. Install PyTorch with CUDA Acceleration
-```powershell
-# Install PyTorch with CUDA 12.1 for NVIDIA RTX 3070 Ti
-uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```bash
+# Install PyTorch with CUDA 12.8 wheels for NVIDIA RTX 3070 Ti (driver 620.x)
+uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # Install remaining dependencies
+# (torch di requirements.txt sudah terpenuhi oleh build CUDA di atas, jadi tidak diunduh ulang)
 uv pip install -r requirements.txt
 ```
+> Wheel CUDA itu besar (±5 GB). Kalau `pypi.nvidia.com` timeout, ulangi dengan
+> `export UV_HTTP_TIMEOUT=300` lalu jalankan perintah install yang sama.
 
 ### 3. Verify CUDA & GPU Hardware
-```powershell
+```bash
 python -c "import torch; print('CUDA Available:', torch.cuda.is_available()); print('GPU Model:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None')"
 ```
 
 ### 4. Run Experiment Pipeline on DEAM
-```powershell
-# Runs end-to-end benchmark on 1,802 DEAM tracks
+```bash
+# Runs end-to-end benchmark (1,802 DEAM tracks, atau sintetis kalau Dataset/DEAM tidak ada)
 python experiments/run_experiment.py --playlist_length 12 --k_neighbors 7
 ```
+
+> **Dataset:** taruh DEAM di `Dataset/DEAM/` (lihat `src/deam_loader.py` untuk struktur
+> folder yang diharapkan). Tanpa folder itu, `run_experiment.py` otomatis memakai dataset
+> sintetis 1.500 track agar pipeline tetap bisa diuji.
 
 Outputs are automatically saved to `experiments/results/`:
 - `metrics_comparison_deam.csv`
@@ -135,7 +156,7 @@ Outputs are automatically saved to `experiments/results/`:
 
 ## 🐙 Git & GitHub Workflow
 
-```powershell
+```bash
 # 1. Initialize git
 git init
 git branch -M main
