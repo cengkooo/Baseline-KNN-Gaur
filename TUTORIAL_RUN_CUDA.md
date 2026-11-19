@@ -94,15 +94,17 @@ Menguji transisi emosi diagonal dari **Kuadran 3 (Sad)** ke **Kuadran 1 (Happy)*
 python experiments/run_experiment.py --playlist_length 12 --k_neighbors 7
 ```
 
-**Output yang diharapkan** (tanpa dataset DEAM → otomatis sintetis, ±5 detik):
+**Output yang diharapkan** (dengan `Dataset/DEAM` + `data/processed/deam_extracted_features.csv` → Mode B; tanpa keduanya → otomatis sintetis):
 ```text
 [⚡ GPU ACTIVE] Using: NVIDIA GeForce RTX 3070 Ti Laptop GPU | CUDA: 12.8
 [RTX 3070 Ti VRAM] Allocated: 0.00 MB | Reserved: 0.00 MB
-[*] Generating synthetic dataset (1,500 tracks)...
-[+] PCA 12 Components Fitted. Cumulative Explained Variance: 85.70%
-[+] KD-Tree indexed over 1500 unique coordinate points.
+[+] Active Dataset: DEAM (1,802 Tracks) | Total Tracks: 1802 | Audio Features: 15
+[+] PCA 12 Components Fitted. Cumulative Explained Variance: 99.10%
+[+] KD-Tree indexed over 1113 unique coordinate points.
 [V] DEAM Baseline experiment execution completed successfully!
 ```
+
+Hasil terverifikasi 19 Nov 2026 (Mode B, N=12, K=7): Smoothness PCC Cosine `0.995043`, Euclidean `0.992504`, Manhattan `0.983973`; playlist `DEAM_2022 → DEAM_1879`.
 
 **Artefak yang dihasilkan di `experiments/results/`:**
 * `metrics_comparison_deam.csv`: Perbandingan metrik jarak Cosine vs Euclidean vs Manhattan.
@@ -158,9 +160,18 @@ Dataset/DEAM/DEAM_Annotations/annotations/annotations averaged per song/song_lev
 Dataset/DEAM/DEAM_audio/MEMD_audio/{song_id}.mp3
 ```
 
+Sumber fitur akustik ditentukan otomatis:
+- `data/processed/deam_extracted_features.csv` ada → **Mode B** (fitur 15 kolom hasil ekstraksi librosa dari 1.802 MP3; sudah tersedia, PCA variance 99.10%).
+- File itu tidak ada → **Mode A** (fitur sintetis deterministik, `random_state=42`); sah untuk validasi algoritma, bukan klaim akustik nyata.
+
 Kalau folder `Dataset/DEAM/` tidak ada:
 - `run_experiment.py` otomatis memakai **dataset sintetis 1.500 track** (pipeline tetap bisa diuji).
 - `run_quadrant_experiments.py` akan gagal karena wajib membaca anotasi DEAM.
+
+Regenerasi fitur nyata (± 3 menit dengan 12 worker; 1.802 lagu):
+```bash
+python src/deam_extractor.py   # sequential, ± 35 menit, tanpa resume
+```
 
 Jalankan dengan path lain bila dataset disimpan di luar repo:
 ```bash

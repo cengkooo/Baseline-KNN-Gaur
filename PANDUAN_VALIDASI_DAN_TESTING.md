@@ -142,15 +142,16 @@ python "EXPERIMENT/Code/baseline_gaur/experiments/run_experiment.py" --playlist_
    ```text
    === EXPERIMENTAL RESULTS SUMMARY ON DEAM (Gaur 2023 Metrics) ===
       Metric  Smoothness (PCC)  Evenness V-A Var  Evenness Audio Var  Mean V-A Step  Mean Audio Step
-      Cosine          0.978100          0.000349            0.005409       0.043573         0.350620
-   Euclidean          0.987591          0.000238            0.005082       0.044077         0.310623
-   Manhattan          0.976171          0.000290            0.004930       0.043540         0.289535
+      Cosine          0.995043          0.000245            0.004586       0.042695         0.206768
+   Euclidean          0.992504          0.000288            0.002053       0.042230         0.191666
+   Manhattan          0.983973          0.000312            0.004336       0.043303         0.201044
    ```
+   > Angka di atas adalah **Mode B** (fitur akustik nyata dari 1.802 MP3, `data/processed/deam_extracted_features.csv`, PCA variance 99.10%). Hasil Mode A (sintetis) sebelumnya: Cosine 0.978100 / Euclidean 0.987591 / Manhattan 0.976171.
 2. **Berkas CSV Playlist Hasil:**  
    Buka `EXPERIMENT/Code/baseline_gaur/experiments/results/baseline_cosine_deam_playlist.csv`.  
    Perhatikan kolom `step`, `track_id`, `valence`, dan `arousal`:
    - Step 0: `DEAM_2022` ($V = -0.300, A = -0.150$ $\to$ Sad / Q3)
-   - Step 1: `DEAM_1029` ($V = -0.275, A = -0.125$)
+   - Step 1: `DEAM_0153` ($V = -0.275, A = -0.125$)
    - ... (bergerak naik secara mulus)
    - Step 11: `DEAM_1879` ($V = +0.100, A = +0.350$ $\to$ Happy / Q1)
 3. **Plot Visualisasi 2D:**  
@@ -218,15 +219,18 @@ Skrip ini akan memindai `EXPERIMENT/Dataset/DEAM/DEAM_audio/MEMD_audio/*.mp3`, m
 
 | Metrik Evaluasi | Rentang Nilai | Arah Optimal | Makna Ilmiah | Nilai Capaian Baseline pada DEAM |
 | :--- | :---: | :---: | :--- | :---: |
-| **Smoothness (PCC $|\rho|$)** | $[0.0, 1.0]$ | **Mendekati 1.0** (Makin Besar Makin Baik) | Mengukur linearitas pergerakan emosi di ruang $(V, A)$. Nilai $> 0.90$ menandakan lagu-lagu tersusun rapi mengikuti garis lurus diagonal rute tanpa zigzag liar. | **0.978 – 0.987** (Sangat Halus) |
+| **Smoothness (PCC $|\rho|$)** | $[0.0, 1.0]$ | **Mendekati 1.0** (Makin Besar Makin Baik) | Mengukur linearitas pergerakan emosi di ruang $(V, A)$. Nilai $> 0.90$ menandakan lagu-lagu tersusun rapi mengikuti garis lurus diagonal rute tanpa zigzag liar. | Single run (N=12, K=7): **0.984 – 0.995**; rata-rata batch: **0.847** |
 | **Evenness V-A Variance** | $[0.0, \infty)$ | **Mendekati 0.0** (Makin Kecil Makin Baik) | Mengukur keseragaman jarak emosi antar lagu berurutan. Semakin kecil variansinya, semakin konsisten ritme perpindahan emosi (tidak ada jeda loncatan mendadak). | **0.0002 – 0.0003** (Sangat Seragam) |
-| **Evenness Audio Variance** | $[0.0, \infty)$ | **Mendekati 0.0** (Makin Kecil Makin Baik) | Mengukur keseragaman transisi akustik (timbre, tempo, energi) antar lagu berurutan di ruang 12D PCA. | **0.0049 – 0.0054** |
-| **Mean V-A Step Size** | $[0.0, \sqrt{2}]$ | Tergantung Panjang $N$ | Rata-rata jarak emosi per langkah. Untuk $N=12$, step rata-rata berkisar $0.04 - 0.05$. | **~0.043** |
-| **Mean Audio Step Size** | $[0.0, 2.0]$ | Stabil | Rata-rata jarak fitur audio Cosine antar lagu berurutan. | **~0.31 – 0.35** |
+| **Evenness Audio Variance** | $[0.0, \infty)$ | **Mendekati 0.0** (Makin Kecil Makin Baik) | Mengukur keseragaman transisi akustik (timbre, tempo, energi) antar lagu berurutan di ruang 12D PCA. | **0.0021 – 0.0046** |
+| **Mean V-A Step Size** | $[0.0, \sqrt{2}]$ | Tergantung Panjang $N$ | Rata-rata jarak emosi per langkah. Untuk $N=12$, step rata-rata berkisar $0.04 - 0.05$. | **~0.042 – 0.043** |
+| **Mean Audio Step Size** | $[0.0, 2.0]$ | Stabil | Rata-rata jarak fitur audio Cosine antar lagu berurutan. | **~0.19 – 0.21** |
+
+> Catatan: angka pada tabel ini berasal dari **Mode B** (fitur akustik nyata dari 1.802 MP3; PCA variance 99.10%). Rata-rata Smoothness batch 0.847 turun karena rute horizontal/vertikal memang lebih sulit (lihat analisis per rute), bukan karena regresi.
 
 ### Perbandingan Metrik Jarak Stage 2 (Cosine vs. Euclidean vs. Manhattan)
-- **Cosine Distance:** Memberikan keseimbangan terbaik antara kelancaran transisi akustik dan arah fitur timbre, sejalan dengan temuan utama pada paper Gaur (2023).
-- **Euclidean Distance:** Sedikit lebih unggul pada nilai kelurusan garis V-A (PCC 0.987), namun jarak akustik antar lagunya cenderung lebih kaku.
+- **Cosine Distance:** Memberikan keseimbangan terbaik antara kelancaran transisi akustik dan arah fitur timbre, sejalan dengan temuan utama pada paper Gaur (2023). Rata-rata batch: Smoothness 0.8516 vs Euclidean 0.8432, walaupun menang di 3 dari 6 rute.
+- **Euclidean Distance:** Sedikit lebih unggul pada nilai kelurusan garis V-A di single run (PCC 0.9925 vs Cosine 0.9950 untuk diagonal yang sama) dan pada rute diagonal Q3→Q1 (0.9905), namun jarak akustik antar lagunya cenderung lebih kaku. Catatan: `run_quadrant_experiments.py` hanya menjalankan Cosine dan Euclidean (Manhattan tidak termasuk konfigurasi batch).
+- **Manhattan Distance:** Hanya diuji pada single run; Smoothness 0.9840, sedikit di bawah Cosine/Euclidean.
 
 ---
 

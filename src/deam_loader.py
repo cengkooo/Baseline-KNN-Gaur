@@ -99,9 +99,11 @@ def load_or_generate_deam_dataset(deam_root: Optional[str] = None,
         df_feat = pd.read_csv(features_csv_path)
         df_feat.columns = [c.strip() for c in df_feat.columns]
         merged = pd.merge(df_static, df_feat, on='song_id', how='inner')
-        meta_cols = {'song_id', 'track_id', 'song_title', 'artist_name', 'valence_mean', 
-                     'valence_std', 'arousal_mean', 'arousal_std', 'valence', 'arousal'}
-        audio_cols = [c for c in merged.columns if c not in meta_cols]
+        # The features CSV contains exactly the acoustic feature columns plus song_id.
+        # Deriving audio_cols from it (instead of "everything not in meta_cols") avoids
+        # picking up annotation columns such as 'valence_ max_mean' from the second
+        # static-annotation file.
+        audio_cols = [c for c in df_feat.columns if c != 'song_id']
         return merged, audio_cols
         
     # Generate 15 acoustic audio features mimicking MFCC, Spectral, and Energy distributions

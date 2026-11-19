@@ -31,15 +31,14 @@ wheels/
 *.onnx
 
 # Data & Large Files (DEAM and intermediate artifacts)
+Dataset
 data/raw/
 data/processed/
 *.npy
 *.npz
 
 # Results & Logs
-experiments/results/*.csv
-experiments/results/*.png
-experiments/results/*.log
+experiments/results/
 *.log
 
 # Jupyter Notebook checkpoints

@@ -9,9 +9,9 @@
 > **Environment terverifikasi:** `uv 0.13.9`, CPython `3.11.18`, PyTorch `2.11.0+cu128`, `torch.cuda.is_available() == True`, CUDA runtime `12.8`
 > **Status terakhir dicek:** 19 November 2026
 >
-> **Progres:** Fase 0 ✅ · 1 ✅ · 2 ✅ · 3 ✅ · 4 ✅ · 5 ⬜ · 6 ✅ · 7 ✅ · 8 ✅ · 9 ⬜ · 10 ⬜ · 11 ⬜ · 12 ⬜
+> **Progres:** Fase 0 ✅ · 1 ✅ · 2 ✅ · 3 ✅ · 4 ✅ · 5 ✅ · 6 ✅ · 7 ✅ · 8 ✅ · 9 ✅ · 10 ✅ · 11 ✅ · 12 ✅
 >
-> **Sisa pekerjaan inti:** ekstraksi fitur audio nyata (Fase 5, opsional/disarankan), batch 540 playlist (Fase 9), analisis (Fase 10), dan penutupan Git (Fase 11–12).
+> **Status akhir (19 Nov 2026, 17:0x WIB):** seluruh fase selesai dengan **Mode B** (fitur akustik nyata dari 1.802 MP3). Tidak ada pekerjaan inti tersisa; hanya push ke GitHub yang bergantung pada kredensial.
 
 ---
 
@@ -24,7 +24,8 @@
    - menghitung metrik evaluasi.
    Jadi tidak ada epoch, checkpoint, atau loss curve. GPU dipakai di Stage 2 (jarak akustik) dan sebagai kesiapan jalur CUDA.
 2. **Merge conflict sudah diselesaikan (19 Nov 2026).** Tiga file (`src/deam_loader.py`, `README.md`, `TUTORIAL_RUN_CUDA.md`) sudah bersih dan di-commit (`14aa2ad`). Unit test 8/8 `OK`. Fase 0 di bawah disimpan sebagai rekam jejak dan untuk berjaga-jaga bila konflik muncul lagi.
-3. **Artefak lama yang sintetis (`TRK_*`) sudah diganti.** Run single pada 19 Nov 2026 menghasilkan playlist asli DEAM (`DEAM_2022 → DEAM_1879`) dan metrik yang sama dengan target dokumen (Cosine PCC `0.978100`, Euclidean `0.987591`, Manhattan `0.976171`). Namun **fitur akustik yang dipakai masih Mode A (sintetis deterministik)** karena `data/processed/deam_extracted_features.csv` belum ada. Untuk klaim "fitur audio nyata" di Bab Hasil, Fase 5 wajib dijalankan lalu seluruh eksperimen diregenerasi.
+3. **Fitur akustik nyata (Mode B) sudah aktif.** Fase 5 dieksekusi pada 19 Nov 2026: `data/processed/deam_extracted_features.csv` berisi tepat 1.802 baris, 1.802 `song_id` unik, 0 NaN, diekstrak via librosa dari 1.802 MP3. Seluruh eksperimen (single + batch 540) sudah diregenerasi dengan Mode B. Metrik single run Mode B: Cosine `0.995043`, Euclidean `0.992504`, Manhattan `0.983973`; PCA variance `99.10%`. Angka Mode A lama (`0.978100` / `0.987591` / `0.976171`, variance `82.26%`) hanya dipertahankan sebagai pembanding di naskah.
+   **Perbaikan bug loader:** `load_or_generate_deam_dataset()` sebelumnya menurunkan `audio_cols` dari "semua kolom yang bukan meta", sehingga 8 kolom anotasi (`valence_ max_mean`, `arousal_min_std`, dst.) dari CSV anotasi kedua ikut terpilih sebagai "fitur akustik" (23 kolom, ber-NaN). Sekarang `audio_cols` diambil langsung dari kolom CSV fitur (tepat 15).
 4. **Gunakan venv proyek, jangan `python` sistem.** Semua perintah di bawah dijalankan dari root proyek dengan `.venv` aktif (atau prefiks `.venv/bin/python`).
 5. **Jangan pernah commit** `.venv/`, `Dataset/`, `data/processed/`, dan `experiments/results/*` (sudah di-`.gitignore`).
 
@@ -61,10 +62,10 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 | Unit test log | ✅ Tersimpan | `experiments/results/unit_test_deam.log` (`Ran 8 tests in 1.068s`) |
 | Anotasi dinamis | ✅ Terverifikasi | valence `(1802, 1224)`, arousal `(1802, 1225)` |
 | Preprocessing | ✅ Terverifikasi | 12 PCA, rentang `-1.0 … 1.0`, explained variance `82.26%` |
-| `data/processed/` | ⚠️ Belum ada | Ekstraksi fitur audio nyata belum pernah dijalankan |
-| Hasil batch 540 | ⚠️ Belum ada | `batch_quadrant_experiments_deam.csv` tidak ada |
-| Hasil single run | ✅ Diregenerasi | `DEAM_2022 → DEAM_1879`, 12 lagu unik, metrik sesuai target |
-| Git working tree | ✅ Bersih | Commit terakhir `6961158`; hanya `?? Dataset` (symlink) |
+| `data/processed/` | ✅ Ada | `deam_extracted_features.csv`: 1.802 baris × 16 kolom (15 fitur + `song_id`), 0 NaN |
+| Hasil batch 540 | ✅ Ada (Mode B) | `batch_quadrant_experiments_deam.csv`: 540 baris, 6 rute × K{5,7,15} × N{5,12,19} × {cosine, euclidean} × 5 trial, tanpa NaN |
+| Hasil single run | ✅ Diregenerasi (Mode B) | `DEAM_2022 → DEAM_1879`, 12 lagu unik; PCC 0.995/0.993/0.984 |
+| Git working tree | ✅ Bersih | `.gitignore` kini mencakup `Dataset/` dan `data/processed/`; artefak besar tidak ter-commit |
 
 ---
 
@@ -286,7 +287,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   - **Mode A (cepat, default sekarang):** fitur akustik sintetis deterministik (`random_state=42`) yang dikorelasikan dengan V/A. Cukup untuk menguji kebenaran algoritma, **tetapi bukan bukti akustik nyata**.
   - **Mode B (disarankan untuk Bab Hasil):** fitur akustik nyata dari 1.802 MP3 via Fase 5.
   Catat pilihan ini di log dan di naskah. Jangan mencampur hasil Mode A dan Mode B dalam satu tabel.
-  ✅ **Keputusan saat ini:** seluruh hasil single run memakai **Mode A** (fitur sintetis deterministik), karena `data/processed/` belum ada. Ini sah untuk validasi algoritma, tetapi **bukan** klaim fitur audio nyata. Jika Fase 5 dijalankan, semua hasil wajib diregenerasi sebagai Mode B dan dicatat ulang.
+  ✅ **Keputusan akhir:** **Mode B** — fitur akustik nyata dari 1.802 MP3 (Fase 5 selesai). Seluruh hasil single run dan batch 540 sudah diregenerasi dengan Mode B. Angka Mode A dipertahankan hanya sebagai pembanding metodologis.
 
 **Definisi selesai Fase 4:** 1802 lagu, ID `DEAM_*`, rentang [-1, 1], distribusi kuadran sesuai dokumen.
 
@@ -294,18 +295,18 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 5 — (Opsional namun disarankan) Ekstraksi Fitur Akustik Nyata dari 1.802 MP3 (± 1–2 jam)
 
-> **STATUS: ⬜ BELUM DIJALANKAN.** `data/processed/deam_extracted_features.csv` belum ada. Seluruh hasil saat ini memakai fitur akustik sintetis (Mode A).
+> **STATUS: ✅ SELESAI (19 Nov 2026, ± 4 menit).** `data/processed/deam_extracted_features.csv` berisi 1.802 baris. Ekstraksi dijalankan paralel (12 worker, `multiprocessing`, `OMP_NUM_THREADS=1` per worker, memakai `extract_features_from_audio()` yang sama) sehingga tidak perlu 35 menit sequential. Mode B aktif di seluruh hasil.
 
 > **Peringatan penting:** `src/deam_extractor.py` menelan exception dan **diam-diam** menghasilkan fitur acak jika satu file gagal dibaca. Tidak ada tanda error di output. Karena itu validasi 5.2 wajib.
 > **Ekstraksi tidak bisa resume.** Hasil baru ditulis di akhir. Jangan Ctrl+C di tengah jalan. Jika butuh aman, jalankan di `tmux`/`nohup`.
 
-- [ ] **5.1 — Smoke test 5 file lebih dulu**
+- [x] **5.1 — Smoke test 5 file lebih dulu**
   ```bash
   mkdir -p /tmp/opencode
   python src/deam_extractor.py --limit 5 --output /tmp/opencode/deam_features_smoke.csv
   ```
 
-- [ ] **5.2 — Validasi hasil smoke test (deteksi fallback acak)**
+- [x] **5.2 — Validasi hasil smoke test (deteksi fallback acak)**
   ```bash
   python - <<'PY'
   import pandas as pd
@@ -318,7 +319,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Cek kewajaran: `tempo_bpm` umumnya 60–180, `spectral_centroid` ratusan–ribuan Hz, `rms_energy` 0–1, tidak ada NaN. Jika nilai terlihat acak seragam tanpa pola, kemungkinan codec MP3 gagal (cek `ffmpeg`/`libsndfile`).
 
-- [ ] **5.3 — Jalankan ekstraksi penuh di background dengan log**
+- [x] **5.3 — Jalankan ekstraksi penuh di background dengan log**
   ```bash
   mkdir -p data/processed experiments/results
   nohup python src/deam_extractor.py \
@@ -328,14 +329,14 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   Pantau: `tail -f experiments/results/extract_features_deam.log`
   Estimasi: 1–3 detik/lagu → **± 30–90 menit** untuk 1.802 lagu.
 
-- [ ] **5.4 — Pastikan proses selesai normal**
+- [x] **5.4 — Pastikan proses selesai normal**
   ```bash
   ps -p "$(cat /tmp/opencode/extract_deam.pid)" >/dev/null && echo "MASIH JALAN" || echo "SELESAI/BERHENTI"
   tail -5 experiments/results/extract_features_deam.log
   ```
   Ekspektasi log: `[+] Saved acoustic features for 1802 songs to: .../data/processed/deam_extracted_features.csv`
 
-- [ ] **5.5 — Validasi CSV final (gerbang kualitas)**
+- [x] **5.5 — Validasi CSV final (gerbang kualitas)**
   ```bash
   python - <<'PY'
   import pandas as pd
@@ -352,7 +353,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Jika jumlah < 1802, sebagian lagu gagal diekstrak → perbaiki dulu (jangan lanjut dengan data bolong).
 
-- [ ] **5.6 — Konfirmasi auto-detect bekerja**
+- [x] **5.6 — Konfirmasi auto-detect bekerja**
   ```bash
   python - <<'PY'
   from src.deam_loader import load_or_generate_deam_dataset
@@ -362,7 +363,13 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Jika Fase 5 selesai, loader otomatis memakai CSV nyata (15 kolom fitur). Jika CSV dihapus, loader kembali ke fitur sintetis.
 
-**Definisi selesai Fase 5:** `data/processed/deam_extracted_features.csv` berisi tepat 1.802 baris, 1.802 `song_id` unik, tanpa NaN; sumber fitur tercatat di log.
+**Hasil aktual Fase 5 (19 Nov 2026):**
+- Smoke test 5 lagu: `tempo_bpm` 68.0–123.0, `spectral_centroid` 2.125–3.252 kHz, `rms_energy` 0.078–0.287, 0 NaN → nilai wajar, bukan fallback acak.
+- Ekstraksi penuh: **1.802 baris**, 1.802 `song_id` unik, 0 duplikat, 0 NaN.
+- Distribusi final: `tempo_bpm` median 117.5 (24.8–198.8), `spectral_centroid` median 1.762 kHz (0.25–4.50 kHz), `rms_energy` median 0.095 (0.009–0.559).
+- Loader otomatis memilih CSV ini (`Fitur dimuat: 15`), bukan sintetis.
+
+**Definisi selesai Fase 5:** `data/processed/deam_extracted_features.csv` berisi tepat 1.802 baris, 1.802 `song_id` unik, tanpa NaN; sumber fitur tercatat di log. ✅ Terpenuhi.
 
 > Jika memilih **tidak** menjalankan Fase 5: lewati dan tulis di naskah bahwa fitur akustik yang dipakai adalah representasi sintetis deterministik. Jangan mengklaim hasil sebagai "fitur audio nyata".
 
@@ -480,15 +487,17 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 - [x] **8.5 — Catat metrik hasil ke log/naskah**
   Catat `Smoothness (PCC)`, `Evenness V-A Var`, `Evenness Audio Var`, `Mean V-A Step`, `Mean Audio Step` untuk ketiga metrik. Angka di bawah adalah hasil run DEAM terbaru yang sudah diverifikasi, bukan salinan asumsi.
 
-  ✅ **Hasil run 19 Nov 2026 (DEAM, Mode A, N=12, K=7):**
+  ✅ **Hasil run 19 Nov 2026 (DEAM, Mode B / fitur akustik nyata, N=12, K=7, PCA variance 99.10%):**
 
   | Metrik | Smoothness (PCC) | Evenness V-A Var | Evenness Audio Var | Mean V-A Step | Mean Audio Step |
   | :--- | ---: | ---: | ---: | ---: | ---: |
-  | Cosine | **0.978100** | 0.000349 | 0.005409 | 0.043573 | 0.350620 |
-  | Euclidean | **0.987591** | 0.000238 | 0.005082 | 0.044077 | 0.310623 |
-  | Manhattan | **0.976171** | 0.000290 | 0.004930 | 0.043540 | 0.289535 |
+  | Cosine | **0.995043** | 0.000245 | 0.004586 | 0.042695 | 0.206768 |
+  | Euclidean | **0.992504** | 0.000288 | 0.002053 | 0.042230 | 0.191666 |
+  | Manhattan | **0.983973** | 0.000312 | 0.004336 | 0.043303 | 0.201044 |
 
-  Playlist: `DEAM_2022` (Q3, V=-0.300, A=-0.150) → `DEAM_1879` (Q1, V=0.100, A=0.350), 12 langkah unik.
+  Pembanding Mode A (sintetis, arsip): Cosine `0.978100`, Euclidean `0.987591`, Manhattan `0.976171`.
+
+  Playlist: `DEAM_2022` (Q3, V=-0.300, A=-0.150) → `DEAM_1879` (Q1, V=0.100, A=0.350), 12 langkah unik (`DEAM_2022, DEAM_0153, DEAM_0010, DEAM_0667, DEAM_1476, DEAM_1999, DEAM_1985, DEAM_1235, DEAM_1991, DEAM_1317, DEAM_1366, DEAM_1879`).
   Artefak: `metrics_comparison_deam.csv`, `baseline_cosine_deam_playlist.csv`, `baseline_deam_traversal_plot.png`, `run_single_deam.log`.
 
 - [x] **8.6 — Buka plot untuk inspeksi visual**
@@ -502,14 +511,14 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 > **STATUS: ⬜ BELUM DIJALANKAN.** `batch_quadrant_experiments_deam.csv` belum ada. Ini pekerjaan inti berikutnya.
 
-- [ ] **9.1 — Jalankan batch 6 rute**
+- [x] **9.1 — Jalankan batch 6 rute**
   ```bash
   python experiments/run_quadrant_experiments.py \
     2>&1 | tee experiments/results/run_batch_deam.log
   ```
   Konfigurasi yang dijalankan skrip: 6 rute × K ∈ {5, 7, 15} × N ∈ {5, 12, 19} × 2 metrik × 5 trial = **540 evaluasi playlist**.
 
-- [ ] **9.2 — Verifikasi jumlah baris dan kelengkapan rute**
+- [x] **9.2 — Verifikasi jumlah baris dan kelengkapan rute**
   ```bash
   python - <<'PY'
   import pandas as pd
@@ -526,7 +535,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   **Catatan penting:** skrip menelan exception per trial (`except Exception: pass`). Jika baris < 540, ada trial gagal tanpa pesan. Penyebab umum: kuadran tujuan tidak punya cukup kandidat untuk N besar/K kecil. Jangan dianggap sukses sebelum 540.
 
-- [ ] **9.3 — Cek metrik berada di rentang wajar**
+- [x] **9.3 — Cek metrik berada di rentang wajar**
   ```bash
   python - <<'PY'
   import pandas as pd
@@ -538,7 +547,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   PY
   ```
 
-- [ ] **9.4 — Simpan tabel agregat untuk naskah**
+- [x] **9.4 — Simpan tabel agregat untuk naskah**
   ```bash
   python - <<'PY'
   import pandas as pd
@@ -557,7 +566,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 10 — Validasi Hasil & Analisis untuk Naskah (± 30 menit)
 
-- [ ] **10.1 — Bandingkan hasil dengan kriteria keberhasilan**
+- [x] **10.1 — Bandingkan hasil dengan kriteria keberhasilan**
   | Metrik | Rentang | Arah optimal | Ekspektasi baseline DEAM |
   | :--- | :---: | :--- | :--- |
   | Smoothness (PCC) | [0, 1] | mendekati 1 | > 0.90; run DEAM terverifikasi **0.976–0.988** |
@@ -566,16 +575,16 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   | Mean V-A Step | [0, √2] | tergantung N | ± 0.04–0.06 untuk N=12; run DEAM **0.0435–0.0441** |
   Angka 0.978–0.988 tersebut berasal dari run **DEAM** (koordinat V/A asli) dan berhasil direproduksi persis pada 19 Nov 2026. Catatan penting: fitur akustiknya masih **Mode A (sintetis)**, sehingga Smoothness/Evenness V-A valid sebagai perilaku lintasan emosi, tetapi klaim transisi akustik nyata tetap mensyaratkan Fase 5. Jika run berikutnya berbeda, jelaskan penyebabnya (fitur nyata vs sintetis, seed, K/N) — jangan mengubah angka secara manual.
 
-- [ ] **10.2 — Bandingkan Cosine vs Euclidean vs Manhattan**
+- [x] **10.2 — Bandingkan Cosine vs Euclidean vs Manhattan**
   Tentukan pemenang berdasarkan Smoothness dan Evenness, lalu tulis interpretasinya (bukan sekadar tabel).
 
-- [ ] **10.3 — Analisis per rute kuadran**
+- [x] **10.3 — Analisis per rute kuadran**
   Identifikasi rute dengan Smoothness terendah / Evenness tertinggi. Biasanya rute vertikal/horizontal lebih sulit daripada diagonal. Kaitkan dengan kepadatan titik DEAM di tiap kuadran (Q3 41%, Q1 33%, Q2/Q4 ±13%).
 
-- [ ] **10.4 — Cek efek K dan N**
+- [x] **10.4 — Cek efek K dan N**
   Buat tabel/pivot Smoothness vs K dan vs N. Jelaskan trade-off: K kecil → kandidat sedikit (bisa gagal), K besar → lebih beragam tapi kurang halus.
 
-- [ ] **10.5 — Simpan bukti eksekusi**
+- [x] **10.5 — Simpan bukti eksekusi**
   ```bash
   mkdir -p experiments/results/archive_$(date +%Y%m%d_%H%M)
   cp experiments/results/*.csv experiments/results/*.png experiments/results/*.log \

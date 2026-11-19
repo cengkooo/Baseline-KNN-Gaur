@@ -1,9 +1,20 @@
 {
   "dataset": "DEAM",
-  "k_values": [5, 7, 10, 15, 20, 25, 30],
-  "playlist_lengths": [5, 11, 12, 15, 19],
-  "metrics": ["cosine", "euclidean", "manhattan"],
-  "n_runs_per_config": 50,
+  "feature_mode": "B (real acoustic features from 1802 MP3, data/processed/deam_extracted_features.csv)",
+  "single_run": {
+    "playlist_length": 12,
+    "k_neighbors": 7,
+    "metrics": ["cosine", "euclidean", "manhattan"]
+  },
+  "batch": {
+    "routes": 6,
+    "k_values": [5, 7, 15],
+    "playlist_lengths": [5, 12, 19],
+    "metrics": ["cosine", "euclidean"],
+    "n_runs_per_config": 5,
+    "total_evaluations": 540
+  },
+  "random_state": 42,
   "hardware": {
     "preferred_device": "cuda",
     "gpu_name": "NVIDIA GeForce RTX 3070 Ti",
