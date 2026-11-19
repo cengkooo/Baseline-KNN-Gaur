@@ -1,0 +1,37 @@
+_wandb:
+    value:
+        cli_version: 0.31.0
+        e:
+            01a1f35a-1272-77ea-8efa-ff4fc3741918:
+                codePath: wandb-set-up.py
+                codePathLocal: wandb-set-up.py
+                email: andryanoshevchenkolimbong@gmail.com
+                executable: /home/itera-if/TA-123140205/Code/Baseline-KNN-Gaur/.venv/bin/python
+                git:
+                    commit: e7112c19bc7103712333307993aa66e7afe74ded
+                    remote: https://github.com/cengkooo/Baseline-KNN-Gaur.git
+                host: informatika-cachy
+                os: Linux-7.3.4-1-cachyos-x86_64-with-glibc2.44
+                program: /home/itera-if/TA-123140205/Code/Baseline-KNN-Gaur/wandb-set-up.py
+                python: CPython 3.11.18
+                root: /home/itera-if/TA-123140205/Code/Baseline-KNN-Gaur
+                startedAt: "2026-11-19T10:28:48.877534Z"
+                writerId: 01a1f35a-1272-77ea-8efa-ff4fc3741918
+        m: []
+        python_version: 3.11.18
+        t:
+            "3":
+                - 2
+                - 16
+            "4": 3.11.18
+            "5": 0.31.0
+            "12": 0.31.0
+            "13": linux-x86_64
+architecture:
+    value: CNN
+dataset:
+    value: CIFAR-100
+epochs:
+    value: 10
+learning_rate:
+    value: 0.02
