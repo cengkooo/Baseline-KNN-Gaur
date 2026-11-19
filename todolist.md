@@ -56,7 +56,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 | **Merge conflict** | ✅ Selesai | Commit `14aa2ad`; unit test 8/8 `OK` |
 | `data/processed/` | ⚠️ Belum ada | Ekstraksi fitur audio nyata belum pernah dijalankan |
 | Hasil batch 540 | ⚠️ Belum ada | `batch_quadrant_experiments_deam.csv` tidak ada |
-| Hasil single run | ⚠️ Stale/sintetis | Ada, tetapi `TRK_*` (bukan DEAM) |
+| Hasil single run | ✅ Diregenerasi | Playlist `DEAM_2022 → DEAM_1879`, metrik sesuai target |
 | Git working tree | ✅ Bersih | Hanya `?? Dataset` (symlink, memang tidak di-commit) |
 
 ---
@@ -413,13 +413,13 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 8 — Single Run Experiment (Q3 Sad → Q1 Happy) di CUDA (± 1–3 menit)
 
-- [ ] **8.1 — Jalankan eksperimen tunggal dengan log**
+- [x] **8.1 — Jalankan eksperimen tunggal dengan log**
   ```bash
   python experiments/run_experiment.py --playlist_length 12 --k_neighbors 7 \
     2>&1 | tee experiments/results/run_single_deam.log
   ```
 
-- [ ] **8.2 — Verifikasi output konsol**
+- [x] **8.2 — Verifikasi output konsol**
   Yang wajib muncul:
   - `[⚡ GPU ACTIVE] Using: NVIDIA GeForce RTX 3070 Ti Laptop GPU | CUDA: 12.8`
   - `Active Dataset: DEAM (1,802 Tracks) | Total Tracks: 1802`
@@ -428,7 +428,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   - Tabel 3 metrik (Cosine/Euclidean/Manhattan)
   - `[V] DEAM Baseline experiment execution completed successfully!`
 
-- [ ] **8.3 — Verifikasi artefak dan asal dataset (gerbang anti-regresi)**
+- [x] **8.3 — Verifikasi artefak dan asal dataset (gerbang anti-regresi)**
   ```bash
   ls -l experiments/results/metrics_comparison_deam.csv \
         experiments/results/baseline_cosine_deam_playlist.csv \
@@ -437,7 +437,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   **Wajib:** `track_id` berawalan `DEAM_`. Jika masih `TRK_*`, run memakai data sintetis → kembali ke Fase 0.2/4.1.
 
-- [ ] **8.4 — Cek integritas playlist**
+- [x] **8.4 — Cek integritas playlist**
   ```bash
   python - <<'PY'
   import pandas as pd
@@ -452,10 +452,10 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   PY
   ```
 
-- [ ] **8.5 — Catat metrik hasil ke log/naskah**
+- [x] **8.5 — Catat metrik hasil ke log/naskah**
   Catat `Smoothness (PCC)`, `Evenness V-A Var`, `Evenness Audio Var`, `Mean V-A Step`, `Mean Audio Step` untuk ketiga metrik. Jangan menyalin angka dari dokumen lama — angka lama berasal dari run sintetis dan berbeda.
 
-- [ ] **8.6 — Buka plot untuk inspeksi visual**
+- [x] **8.6 — Buka plot untuk inspeksi visual**
   `experiments/results/baseline_deam_traversal_plot.png` harus menampilkan lintasan diagonal dari kiri-bawah (Q3) ke kanan-atas (Q1) pada bidang Russell.
 
 **Definisi selesai Fase 8:** log menunjukkan GPU aktif + dataset DEAM, 3 artefak baru, playlist 12 lagu unik `DEAM_*` dari Q3 ke Q1, metrik tercatat.
