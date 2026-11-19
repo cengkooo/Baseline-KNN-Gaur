@@ -19,7 +19,7 @@
    - menjalankan retrieval + re-ranking untuk menghasilkan playlist,
    - menghitung metrik evaluasi.
    Jadi tidak ada epoch, checkpoint, atau loss curve. GPU dipakai di Stage 2 (jarak akustik) dan sebagai kesiapan jalur CUDA.
-2. **Kondisi checkout saat ini BELUM BISA DIJALANKAN.** Ada 3 file dengan *merge conflict marker* yang belum diselesaikan. Unit test langsung gagal `IndentationError` di `src/deam_loader.py`. Ini adalah blocker Fase 0.
+2. **Merge conflict sudah diselesaikan (19 Nov 2026).** Tiga file (`src/deam_loader.py`, `README.md`, `TUTORIAL_RUN_CUDA.md`) sudah bersih dan di-commit (`14aa2ad`). Unit test 8/8 `OK`. Fase 0 di bawah disimpan sebagai rekam jejak dan untuk berjaga-jaga bila konflik muncul lagi.
 3. **Artefak hasil yang ada sekarang berasal dari dataset sintetis, bukan DEAM.** Bukti: `experiments/results/baseline_cosine_deam_playlist.csv` berisi `track_id` `TRK_000070`, `Song Title 70`, sedangkan DEAM asli ber-ID `DEAM_xxxx`. Artinya run lama jatuh ke fallback sintetis. Artefak ini **harus diregenerasi** setelah Fase 0 selesai, dan wajib diverifikasi ber-ID `DEAM_`.
 4. **Gunakan venv proyek, jangan `python` sistem.** Semua perintah di bawah dijalankan dari root proyek dengan `.venv` aktif (atau prefiks `.venv/bin/python`).
 5. **Jangan pernah commit** `.venv/`, `Dataset/`, `data/processed/`, dan `experiments/results/*` (sudah di-`.gitignore`).
@@ -53,11 +53,11 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 | PyTorch CUDA | ✅ | `2.11.0+cu128`, `cuda.is_available() == True` |
 | Dataset DEAM | ✅ | symlink `Dataset` → `~/TA-123140205/Dataset`, 1.802 MP3, anotasi lengkap |
 | Manifest split | ✅ | train 1.261 / val 270 / test 271 |
-| **Merge conflict** | ❌ **BLOCKER** | `src/deam_loader.py`, `README.md`, `TUTORIAL_RUN_CUDA.md` |
+| **Merge conflict** | ✅ Selesai | Commit `14aa2ad`; unit test 8/8 `OK` |
 | `data/processed/` | ⚠️ Belum ada | Ekstraksi fitur audio nyata belum pernah dijalankan |
 | Hasil batch 540 | ⚠️ Belum ada | `batch_quadrant_experiments_deam.csv` tidak ada |
 | Hasil single run | ⚠️ Stale/sintetis | Ada, tetapi `TRK_*` (bukan DEAM) |
-| Git working tree | ❌ | `UU README.md`, `UU TUTORIAL_RUN_CUDA.md`, `UU src/deam_loader.py`, `M src/metrics.py`, `?? Dataset` |
+| Git working tree | ✅ Bersih | Hanya `?? Dataset` (symlink, memang tidak di-commit) |
 
 ---
 
@@ -65,7 +65,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 > **Gerbang wajib.** Semua fase lain akan gagal selama langkah ini belum tuntas.
 
-- [ ] **0.1 — Cek status dan daftar file konflik**
+- [x] **0.1 — Cek status dan daftar file konflik**
   ```bash
   cd ~/TA-123140205/Code/Baseline-KNN-Gaur
   git status --short
@@ -74,7 +74,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Ekspektasi saat ini: `README.md`, `TUTORIAL_RUN_CUDA.md`, `src/deam_loader.py`.
 
-- [ ] **0.2 — Perbaiki `src/deam_loader.py` (WAJIB, ini yang memblokir eksekusi)**
+- [x] **0.2 — Perbaiki `src/deam_loader.py` (WAJIB, ini yang memblokir eksekusi)**
   Hapus semua marker `<<<<<<<`, `=======`, `>>>>>>>`, lalu pertahankan versi path yang **relatif ke root repo** karena dataset di laptop ini ada di `Dataset/DEAM` (symlink), bukan `EXPERIMENT/Dataset/DEAM`.
   Ganti seluruh fungsi `get_default_deam_path()` dengan versi bersih berikut:
   ```python
@@ -93,18 +93,18 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Jangan mempertahankan fallback Windows `D:\Kuliah\...` — tidak relevan di laptop ini.
 
-- [ ] **0.3 — Perbaiki `README.md` dan `TUTORIAL_RUN_CUDA.md`**
+- [x] **0.3 — Perbaiki `README.md` dan `TUTORIAL_RUN_CUDA.md`**
   Keduanya hanya konflik dokumentasi. **Gabungkan kedua sisi**, jangan pilih salah satu:
   - `README.md`: pertahankan bagian *DEAM Dataset Splitting Methodology (Anti-Data Leakage)* **dan** bagian *Setup & Execution Guide (CachyOS / Linux)*.
   - `TUTORIAL_RUN_CUDA.md`: pertahankan path `Dataset/DEAM/DEAM_audio/MEMD_audio` (Linux) **dan** Opsi D (stratified split); buang referensi `EXPERIMENT/Dataset` yang tidak ada di laptop ini.
 
-- [ ] **0.4 — Verifikasi tidak ada marker tersisa**
+- [x] **0.4 — Verifikasi tidak ada marker tersisa**
   ```bash
   grep -rn '^<<<<<<< \|^=======$\|^>>>>>>> ' --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ . || echo "BERSIH"
   python -m py_compile src/*.py experiments/*.py tests/test_baseline.py && echo "SEMUA FILE PYTHON VALID"
   ```
 
-- [ ] **0.5 — Tandai konflik selesai dan commit**
+- [x] **0.5 — Tandai konflik selesai dan commit**
   ```bash
   git add src/deam_loader.py README.md TUTORIAL_RUN_CUDA.md src/metrics.py
   git status --short          # pastikan tidak ada lagi kode UU
