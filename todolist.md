@@ -567,22 +567,35 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 # 🔹 FASE 10 — Validasi Hasil & Analisis untuk Naskah (± 30 menit)
 
 - [x] **10.1 — Bandingkan hasil dengan kriteria keberhasilan**
-  | Metrik | Rentang | Arah optimal | Ekspektasi baseline DEAM |
+  | Metrik | Rentang | Arah optimal | Hasil Mode B |
   | :--- | :---: | :--- | :--- |
-  | Smoothness (PCC) | [0, 1] | mendekati 1 | > 0.90; run DEAM terverifikasi **0.976–0.988** |
-  | Evenness V-A Var | ≥ 0 | mendekati 0 | kecil (orde 10⁻³–10⁻⁴); run DEAM **0.000238–0.000349** |
-  | Evenness Audio Var | ≥ 0 | mendekati 0 | kecil; run DEAM **0.004930–0.005409** |
-  | Mean V-A Step | [0, √2] | tergantung N | ± 0.04–0.06 untuk N=12; run DEAM **0.0435–0.0441** |
-  Angka 0.978–0.988 tersebut berasal dari run **DEAM** (koordinat V/A asli) dan berhasil direproduksi persis pada 19 Nov 2026. Catatan penting: fitur akustiknya masih **Mode A (sintetis)**, sehingga Smoothness/Evenness V-A valid sebagai perilaku lintasan emosi, tetapi klaim transisi akustik nyata tetap mensyaratkan Fase 5. Jika run berikutnya berbeda, jelaskan penyebabnya (fitur nyata vs sintetis, seed, K/N) — jangan mengubah angka secara manual.
+  | Smoothness (PCC) | [0, 1] | mendekati 1 | Single run (N=12,K=7): **0.9840–0.9950**; batch 540: mean **0.8474**, median **0.9515**, max **0.9999** |
+  | Evenness V-A Var | ≥ 0 | mendekati 0 | Single run **0.000245–0.000312**; batch median **0.000553** |
+  | Evenness Audio Var | ≥ 0 | mendekati 0 | Single run **0.002053–0.004586**; batch median **0.003064** |
+  | Mean V-A Step | [0, √2] | tergantung N | N=12 **0.0422–0.0433**; batch mean 0.0757 (karena N bervariasi 5–19) |
+  Semua hasil sekarang **Mode B (fitur akustik nyata)**. Smoothness V-A single run naik dari 0.978–0.988 (Mode A) ke **0.984–0.995**; Evenness Audio Var turun (0.0049–0.0054 → 0.0021–0.0046), konsisten dengan fitur PCA yang lebih informatif (variance 99.10% vs 82.26%). Batch rata-rata lebih rendah karena rute horizontal/vertikal memang lebih sulit dan N besar (19) menurunkan kelurusan.
 
 - [x] **10.2 — Bandingkan Cosine vs Euclidean vs Manhattan**
-  Tentukan pemenang berdasarkan Smoothness dan Evenness, lalu tulis interpretasinya (bukan sekadar tabel).
+  Hasil: **Cosine** mean Smoothness 0.8516, **Euclidean** 0.8432 (batch; hanya dua metrik ini yang dijalankan skrip batch). Cosine juga menang di single run diagonal (0.9950 vs 0.9925). Namun Euclidean lebih seragam secara akustik (Evenness Audio Var 0.0035 vs 0.0042), sedangkan Cosine menang di 3 rute dan Euclidean di 3 rute lain. Manhattan hanya diuji di single run (0.9840). Interpretasi: pilihan metrik Stage 2 adalah *trade-off* kelurusan emosi (Cosine) vs keseragaman transisi akustik (Euclidean), bukan dominasi mutlak satu metrik.
 
-- [x] **10.3 — Analisis per rute kuadran**
-  Identifikasi rute dengan Smoothness terendah / Evenness tertinggi. Biasanya rute vertikal/horizontal lebih sulit daripada diagonal. Kaitkan dengan kepadatan titik DEAM di tiap kuadran (Q3 41%, Q1 33%, Q2/Q4 ±13%).
+- [x] **10.3 — Analisis per rute kuadran** (Mode B, rata-rata Smoothness)
+  | Rute | Cosine | Euclidean | Catatan |
+  | :--- | ---: | ---: | :--- |
+  | Diagonal Q3→Q1 | 0.9904 | **0.9905** | termudah; kedua kuadran padat (41% + 33%) |
+  | Diagonal Q2→Q4 | **0.9678** | 0.9626 | kedua kuadran jarang (±13%) tapi arah diagonal konsisten |
+  | Vertical Q2→Q3 | 0.9495 | **0.9501** | Q3 padat, Q2 jarang |
+  | Horizontal Q3→Q4 | **0.8202** | 0.8168 | Q4 jarang; lintasan horizontal memotong sumbu valence |
+  | Vertical Q1→Q4 | **0.7189** | 0.6495 | Q4 jarang (13%); turun tajam di arousal |
+  | Horizontal Q1→Q2 | 0.6628 | **0.6899** | terendah; Q2 paling jarang (12.7%) |
+  Rute diagonal memang paling halus; rute yang menyentuh Q2/Q4 (kuadran minoritas, ±13%) paling sulit karena kandidat Stage 1 lebih sedikit sehingga waypoint lebih sering "dipaksa" melompat.
 
 - [x] **10.4 — Cek efek K dan N**
-  Buat tabel/pivot Smoothness vs K dan vs N. Jelaskan trade-off: K kecil → kandidat sedikit (bisa gagal), K besar → lebih beragam tapi kurang halus.
+  | K \ N | 5 | 12 | 19 |
+  | ---: | ---: | ---: | ---: |
+  | 5 | 0.9248 | 0.8776 | 0.8159 |
+  | 7 | 0.9073 | 0.8558 | 0.7891 |
+  | 15 | 0.8865 | 0.8085 | 0.7615 |
+  Trade-off terkonfirmasi: **N kecil & K kecil** paling halus (0.925), **N besar & K besar** paling tidak halus (0.762). K kecil membatasi kandidat (risiko gagal di kuadran jarang), K besar menambah keragaman tapi mengurangi kelurusan karena kandidat terpilih bisa menyimpang dari garis waypoint.
 
 - [x] **10.5 — Simpan bukti eksekusi**
   ```bash
@@ -595,20 +608,22 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 - [x] **10.6 — Catat provenance run (wajib untuk reproduksibilitas)**
   Tulis di log/naskah: commit hash, mode fitur (nyata/sintetis), jumlah lagu, K, N, metrik, seed, versi torch/CUDA, tanggal.
 
-  Template provenance untuk run single yang sudah ada:
+  Provenance run final (Mode B):
   ```text
-  Commit        : 6961158 (fix conflicts + docs)
-  Tanggal       : 19 November 2026
+  Commit        : 3515e16 (real acoustic features + regenerated results)
+  Tanggal       : 19 November 2026, 17:0x WIB
   Dataset       : DEAM, 1.802 tracks, track_id DEAM_*
-  Fitur akustik : Mode A (synthetic deterministic, random_state=42)
+  Fitur akustik : Mode B (librosa, 15 fitur dari 1.802 MP3; 0 NaN)
+  Ekstraksi     : 12 worker paralel, OMP_NUM_THREADS=1, ~4 menit
   Preprocessing : IQR 5.5 / 20 bins -> Yeo-Johnson -> PCA 12D -> MinMax [-1,1]
-  PCA variance  : 82.26% (single run)
+  PCA variance  : 99.10% (single run)
   KD-Tree points: 1.113 unique coordinates
-  Parameter     : N=12, K=7, metric=Cosine/Euclidean/Manhattan
+  Single run    : N=12, K=7, metrics=Cosine/Euclidean/Manhattan
+  Batch         : 6 rute x K{5,7,15} x N{5,12,19} x {cosine,euclidean} x 5 trial = 540
   Hardware      : RTX 3070 Ti Laptop GPU, driver 620.70.06, CUDA 12.8
   PyTorch       : 2.11.0+cu128 | Python 3.11.18 | uv 0.13.9
   ```
-  ↑ Salin ke naskah dan perbarui bila Fase 5/9 dijalankan.
+  ↑ Salin ke naskah. Ringkasan agregat: `experiments/results/batch_quadrant_summary_deam.csv`.
 
 **Definisi selesai Fase 10:** tabel perbandingan, analisis per rute, analisis K/N, arsip hasil, dan provenance tercatat.
 
@@ -616,7 +631,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
 
 # 🔹 FASE 11 — Reproducibility, Git, dan Penutupan (± 15 menit)
 
-- [ ] **11.1 — Pastikan tidak ada konflik & file besar tidak ikut ter-stage**
+- [x] **11.1 — Pastikan tidak ada konflik & file besar tidak ikut ter-stage**
   ```bash
   grep -rn '^<<<<<<< \|^=======$\|^>>>>>>> ' --exclude-dir=.git --exclude-dir=.venv . || echo "BERSIH"
   git status --short
@@ -624,13 +639,13 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Semua path besar harus ter-ignore.
 
-- [ ] **11.2 — Perbarui dokumentasi agar sesuai kondisi laptop**
+- [x] **11.2 — Perbarui dokumentasi agar sesuai kondisi laptop**
   - `TUTORIAL_RUN_CUDA.md`: path `Dataset/DEAM` (bukan `EXPERIMENT/Dataset`), angka hasil aktual, mode fitur.
   - `PANDUAN_VALIDASI_DAN_TESTING.md`: ganti klaim hasil lama bila sudah diregenerasi.
   - `README.md`: bagian setup Linux + split.
   - `experiments/configs/params_deam.json`: selaraskan dengan batch yang benar-benar dijalankan (batch skrip memakai 5 trial, K {5,7,15}, N {5,12,19}, 2 metrik — bukan isi JSON saat ini).
 
-- [ ] **11.3 — Commit kode + dokumen + log teks (bukan artefak besar)**
+- [x] **11.3 — Commit kode + dokumen + log teks (bukan artefak besar)**
   ```bash
   git add src experiments tests README.md PANDUAN_VALIDASI_DAN_TESTING.md \
           TUTORIAL_RUN_CUDA.md Experiment-Baseline-KNN-Gaur-Todolist.md todolist.md \
@@ -640,7 +655,7 @@ git add -A && git commit -m "feat: verified DEAM baseline run on local CUDA RTX 
   ```
   Catatan: `experiments/results/*.log`, `*.csv`, dan `*.png` saat ini **di-ignore** oleh `.gitignore`, sehingga `git add experiments` tidak akan memasukkan log/artefak. Itu disengaja; lihat 11.4 bila ingin mempublikasikannya.
 
-- [ ] **11.4 — Push ke GitHub**
+- [ ] **11.4 — Push ke GitHub** ⛔ *commit lokal sudah siap (`3515e16`); `git push` menggantung/timeout dari sandbox ini (tidak ada kredensial/akses jaringan). Jalankan manual: `git push origin main`*
   ```bash
   git push origin main
   ```
@@ -677,11 +692,11 @@ Centang semuanya sebelum menyatakan eksperimen selesai:
 - [x] Preprocessing menghasilkan 12 komponen PCA dalam skala [-1, 1]; explained variance tercatat (82.26%).
 - [x] Split 1261/270/271 tanpa irisan; keputusan pemakaian katalog penuh tercatat.
 - [x] `run_experiment.py` sukses, playlist 12 lagu unik Q3 → Q1, plot valid.
-- [ ] `run_quadrant_experiments.py` menghasilkan **tepat 540 baris**, 6 rute lengkap, tanpa NaN.
-- [ ] Tabel agregat per rute/metrik tersimpan.
+- [x] `run_quadrant_experiments.py` menghasilkan **tepat 540 baris**, 6 rute lengkap, tanpa NaN.
+- [x] Tabel agregat per rute/metrik tersimpan.
 - [x] Provenance run (commit, seed, versi, mode fitur, tanggal) tercatat di Fase 10.6.
-- [ ] Commit + push selesai; file besar tetap ter-ignore.
-- [ ] Angka di dokumen panduan (`PANDUAN_VALIDASI_DAN_TESTING.md`, `TUTORIAL_RUN_CUDA.md`) sudah disinkronkan dengan hasil run terbaru.
+- [x] Commit selesai; file besar ter-ignore. Push masih pending (lihat 11.4).
+- [x] Angka di dokumen panduan (`PANDUAN_VALIDASI_DAN_TESTING.md`, `TUTORIAL_RUN_CUDA.md`) sudah disinkronkan dengan hasil run terbaru.
 
 ---
 
@@ -764,5 +779,6 @@ python experiments/run_quadrant_experiments.py
 | 19 Nov 2026 (awal) | Dokumen dibuat; menandai blocker merge conflict dan artefak sintetis. |
 | 19 Nov 2026 (update 1) | Konflik diselesaikan (`14aa2ad`); Fase 0 & 8 ditandai selesai; unit test 8/8. |
 | 19 Nov 2026 (update 2) | Fase 1–4, 6, 7 diverifikasi langsung; status tabel disinkronkan; metrik single run dicatat; keputusan Mode A dan katalog penuh didokumentasikan; Fase 5 & 9 ditandai belum dijalankan. |
+| 19 Nov 2026 (update 3) | **Fase 5 dieksekusi**: 1.802 MP3 diekstrak paralel (15 fitur, 0 NaN). Bug `audio_cols` (23 kolom termasuk anotasi) diperbaiki menjadi 15. Single run & batch 540 diregenerasi sebagai **Mode B** (PCC 0.995/0.993/0.984; PCA 99.10%). Fase 9–12 ditutup. Commit `3515e16`. Push pending (kredensial/jaringan). |
 
 *Dokumen ini dibuat untuk kondisi nyata laptop ini per 19 November 2026 dan sengaja menandai blocker, artefak stale, serta jebakan fallback senyap agar tidak ada langkah yang terlewat.*
