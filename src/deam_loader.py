@@ -103,6 +103,13 @@ def load_or_generate_deam_dataset(deam_root: Optional[str] = None,
     df_static = load_deam_static_annotations(deam_root)
     n_tracks = len(df_static)
     
+    if features_csv_path is None:
+        # Automatically check if pre-extracted features exist in data/processed
+        current_file_dir = os.path.dirname(os.path.abspath(__file__))
+        candidate_processed = os.path.abspath(os.path.join(current_file_dir, "..", "data", "processed", "deam_extracted_features.csv"))
+        if os.path.exists(candidate_processed):
+            features_csv_path = candidate_processed
+
     if features_csv_path and os.path.exists(features_csv_path):
         df_feat = pd.read_csv(features_csv_path)
         df_feat.columns = [c.strip() for c in df_feat.columns]
